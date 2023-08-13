@@ -4,17 +4,17 @@ mod tests {
 
     #[test]
     fn can_compile() {
-        let graph = TGraph::<i64, i64>::new();
-        let mut trans = graph.transaction();
-        let n1 = trans.new_node(1);
-        let n2 = trans.new_node(2);
-        let e1 = trans.new_edge(-1, n1, n2);
-        let cvt = trans.commit().unwrap();
+        let context = Context::new();
+        let graph = TGraph::<i64, i64>::new(context.clone());
+        let (n1, n2, e1) = {
+            let mut _trans = graph.transaction();
+            let n1 = _trans.new_node(1);
+            let n2 = _trans.new_node(2);
+            let e1 = _trans.new_edge(-1, n1, n2);
+            (n1, n2, e1)
+        };
         println!("{}", graph);
 
-        let n1 = graph.convert_node(n1, &cvt);
-        let n2 = graph.convert_node(n2, &cvt);
-        let e1 = graph.convert_edge(e1, &cvt);
         {
             let mut _trans = graph.transaction();
             let n3 = _trans.new_node(3);
@@ -32,11 +32,12 @@ mod tests {
         }
         println!("{}", graph);
 
-        let mut trans = graph.transaction();
-        let n5 = trans.new_node(5);
-        trans.new_edge(-5, n2, n5);
-        let cvt = trans.commit().unwrap();
-        let n5 = graph.convert_node(n5, &cvt);
+        let n5 = {
+            let mut trans = graph.transaction();
+            let n5 = trans.new_node(5);
+            trans.new_edge(-5, n2, n5);
+            n5
+        };
         {
             let mut _trans = graph.transaction();
             _trans.update_node(n5, |x| x * 3);
