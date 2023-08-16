@@ -1,13 +1,11 @@
 use visible::StructFields;
 
-use std::cell::{RefCell, RefMut};
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use std::collections::{hash_set, HashSet};
+use std::collections::{hash_map, HashSet};
 
-mod arena;
-pub use arena::*;
+pub use super::arena::*;
 
 mod display;
 pub use display::*;
@@ -34,7 +32,7 @@ pub struct Edge<EDataT> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct NodeIndex(usize);
+pub struct NodeIndex(pub usize);
 
 impl ArenaIndex for NodeIndex {
     fn new(id: usize) -> Self {
@@ -43,7 +41,7 @@ impl ArenaIndex for NodeIndex {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct EdgeIndex(usize);
+pub struct EdgeIndex(pub usize);
 impl ArenaIndex for EdgeIndex {
     fn new(id: usize) -> Self {
         EdgeIndex(id)
@@ -51,43 +49,104 @@ impl ArenaIndex for EdgeIndex {
 }
 
 #[derive(Debug, Clone)]
-struct Graph<NDataT, EDataT> {
+pub struct Graph<NDataT, EDataT> {
     nodes: Arena<Node<NDataT>, NodeIndex>,
     edges: Arena<Edge<EDataT>, EdgeIndex>,
-}
-
-#[derive(Debug, Clone)]
-pub struct TGraph<NDataT, EDataT> {
-    context: Context,
-    graph: RefCell<Graph<NDataT, EDataT>>,
-}
-
-impl<NDataT, EDataT> TGraph<NDataT, EDataT> {
-    pub fn new(context: Context) -> TGraph<NDataT, EDataT> {
-        TGraph {
-            graph: RefCell::new(Graph::new(&context)),
-            context: context,
-        }
-    }
-    pub fn transaction(&self) -> Transaction<NDataT, EDataT> {
-        Transaction::new(self, &self.context)
-    }
 }
 
 impl<NDataT, EDataT> Graph<NDataT, EDataT> {
     pub fn new(context: &Context) -> Graph<NDataT, EDataT> {
         Graph {
-            nodes: Arena::new(&context.node_dist),
-            edges: Arena::new(&context.edge_dist),
+            nodes: Arena::new(Arc::clone(&context.node_dist)),
+            edges: Arena::new(Arc::clone(&context.edge_dist)),
         }
     }
 
-    fn remove_node(&mut self, n: NodeIndex) {
-        self.nodes.remove(n);
+    pub fn get_node(&self, idx: NodeIndex) -> Option<&Node<NDataT>> {
+        self.nodes.get(idx)
+    }
+    pub fn get_edge(&self, idx: EdgeIndex) -> Option<&Edge<EDataT>> {
+        self.edges.get(idx)
     }
 
-    fn remove_edge(&mut self, e: EdgeIndex) {
-        self.edges.remove(e);
+    pub fn iter_nodes(&self) -> hash_map::Iter<'_, NodeIndex, Node<NDataT>> {
+        self.nodes.iter()
+    }
+    pub fn iter_edges(&self) -> hash_map::Iter<'_, EdgeIndex, Edge<EDataT>> {
+        self.edges.iter()
+    }
+
+    pub fn iter_in(&self, node: NodeIndex) -> EdgeIterator<'_, '_, EDataT> {
+        EdgeIterator {
+            edges: &self.edges,
+            iter: self.nodes.get(node).unwrap().in_edges.iter(),
+        }
+    }
+
+    pub fn iter_out(&self, node: NodeIndex) -> EdgeIterator<'_, '_, EDataT> {
+        EdgeIterator {
+            edges: &self.edges,
+            iter: self.nodes.get(node).unwrap().out_edges.iter(),
+        }
+    }
+
+    pub fn len_nodes(&self) -> usize {
+        self.nodes.len()
+    }
+    pub fn len_edges(&self) -> usize {
+        self.edges.len()
+    }
+
+    pub fn commit(&mut self, t: Transaction<NDataT, EDataT>) {
+        if t.committed {
+            return;
+        }
+
+        self.merge_nodes(t.inc_nodes);
+        self.merge_edges(t.inc_edges);
+        for (i, f) in t.mut_nodes {
+            self.modify_node(i, f)
+        }
+        for (i, f) in t.mut_edges {
+            self.modify_edge(i, f)
+        }
+        for (i, f) in t.update_nodes {
+            self.update_node(i, f)
+        }
+        for (i, f) in t.update_edges {
+            self.update_edge(i, f)
+        }
+        for n in &t.dec_nodes {
+            self.remove_node(*n);
+        }
+        for e in &t.dec_edges {
+            self.remove_edge(*e);
+        }
+    }
+
+    fn merge_nodes(&mut self, nodes: Arena<Node<NDataT>, NodeIndex>) {
+        self.nodes.merge(nodes);
+    }
+    fn merge_edges(&mut self, edges: Arena<Edge<EDataT>, EdgeIndex>) {
+        for (idx, e) in edges.iter() {
+            self.nodes[e.from].out_edges.insert(*idx);
+            self.nodes[e.to].in_edges.insert(*idx);
+        }
+        self.edges.merge(edges);
+    }
+
+    fn remove_node(&mut self, idx: NodeIndex) {
+        self.nodes.remove(idx);
+    }
+
+    fn remove_edge(&mut self, idx: EdgeIndex) {
+        let edge = self.edges.remove(idx).unwrap();
+        self.nodes.get_mut(edge.to).unwrap().in_edges.remove(&idx);
+        self.nodes
+            .get_mut(edge.from)
+            .unwrap()
+            .out_edges
+            .remove(&idx);
     }
 
     fn modify_node<F>(&mut self, i: NodeIndex, f: F)
@@ -124,10 +183,8 @@ impl<NDataT, EDataT> Graph<NDataT, EDataT> {
     }
 }
 
-pub struct Transaction<'tg, 'a, NDataT, EDataT> {
-    tgraph: &'tg TGraph<NDataT, EDataT>,
+pub struct Transaction<'a, NDataT, EDataT> {
     committed: bool,
-    manual: bool,
     inc_nodes: Arena<Node<NDataT>, NodeIndex>,
     inc_edges: Arena<Edge<EDataT>, EdgeIndex>,
     dec_nodes: Vec<NodeIndex>,
@@ -138,17 +195,14 @@ pub struct Transaction<'tg, 'a, NDataT, EDataT> {
     update_edges: Vec<(EdgeIndex, Box<dyn FnOnce(EDataT) -> EDataT + 'a>)>,
 }
 
-impl<'tg, 'a, NDataT, EDataT> Transaction<'tg, 'a, NDataT, EDataT> {
-    fn new(
-        tgraph: &'tg TGraph<NDataT, EDataT>,
-        context: &Context,
-    ) -> Transaction<'tg, 'a, NDataT, EDataT> {
+impl<'a, NDataT, EDataT> Transaction<'a, NDataT, EDataT> {
+    pub fn new(context: &Context) -> Self {
+        let node_dist = Arc::clone(&context.node_dist);
+        let edge_dist = Arc::clone(&context.edge_dist);
         Transaction {
-            tgraph,
             committed: false,
-            manual: false,
-            inc_nodes: Arena::new(&context.node_dist),
-            inc_edges: Arena::new(&context.edge_dist),
+            inc_nodes: Arena::new(node_dist),
+            inc_edges: Arena::new(edge_dist),
             dec_nodes: Vec::new(),
             dec_edges: Vec::new(),
             mut_nodes: Vec::new(),
@@ -176,16 +230,12 @@ impl<'tg, 'a, NDataT, EDataT> Transaction<'tg, 'a, NDataT, EDataT> {
     }
 
     pub fn remove_node(&mut self, node: NodeIndex) {
-        if self.inc_nodes.contains(node) {
-            self.inc_nodes.remove(node);
-        } else {
+        if self.inc_nodes.remove(node).is_none() {
             self.dec_nodes.push(node);
         }
     }
     pub fn remove_edge(&mut self, edge: EdgeIndex) {
-        if self.inc_edges.contains(edge) {
-            self.inc_edges.remove(edge);
-        } else {
+        if self.inc_edges.remove(edge).is_none() {
             self.dec_edges.push(edge);
         }
     }
@@ -240,60 +290,8 @@ impl<'tg, 'a, NDataT, EDataT> Transaction<'tg, 'a, NDataT, EDataT> {
         }
     }
 
-    pub fn commit(&mut self) {
-        if self.committed {
-            return;
-        }
-        self.committed = true;
-        let mut graph = self.tgraph.graph.borrow_mut();
-
-        self.addback(&mut graph);
-        while let Some((i, f)) = self.mut_nodes.pop() {
-            graph.modify_node(i, f)
-        }
-        while let Some((i, f)) = self.mut_edges.pop() {
-            graph.modify_edge(i, f)
-        }
-        while let Some((i, f)) = self.update_nodes.pop() {
-            graph.update_node(i, f)
-        }
-        while let Some((i, f)) = self.update_edges.pop() {
-            graph.update_edge(i, f)
-        }
-        for n in &self.dec_nodes {
-            graph.remove_node(*n);
-        }
-        for e in &self.dec_edges {
-            graph.remove_edge(*e);
-        }
-    }
-
     pub fn giveup(&mut self) {
         self.committed = true;
-    }
-
-    pub fn set_manual(&mut self) {
-        self.manual = true;
-    }
-    pub fn set_auto(&mut self) {
-        self.manual = false;
-    }
-
-    fn addback(&mut self, graph: &mut RefMut<Graph<NDataT, EDataT>>) {
-        graph.nodes.merge(&mut self.inc_nodes);
-        for (idx, e) in &self.inc_edges {
-            graph.nodes[e.from].out_edges.insert(*idx);
-            graph.nodes[e.to].in_edges.insert(*idx);
-        }
-        graph.edges.merge(&mut self.inc_edges);
-    }
-}
-
-impl<'tg, 'a, NDataT, EDataT> Drop for Transaction<'tg, 'a, NDataT, EDataT> {
-    fn drop(&mut self) {
-        if !self.manual {
-            self.commit();
-        }
     }
 }
 

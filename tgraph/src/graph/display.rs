@@ -58,9 +58,3 @@ impl<NDataT: Display, EDataT: Display> Display for Graph<NDataT, EDataT> {
         std::fmt::Result::Ok(())
     }
 }
-
-impl<NDataT: Display, EDataT: Display> Display for TGraph<NDataT, EDataT> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.graph.borrow(), f)
-    }
-}

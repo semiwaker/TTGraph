@@ -14,14 +14,14 @@ pub trait ArenaIndex: Hash + PartialEq + Eq + Debug + Copy + Clone {
 
 #[derive(Debug, Clone)]
 pub struct Arena<T, IndexT: ArenaIndex> {
-    context: Arc<IdDistributer>,
+    distributer: Arc<IdDistributer>,
     container: HashMap<IndexT, T>,
 }
 
 impl<T, IndexT: ArenaIndex> Arena<T, IndexT> {
-    pub fn new(context: &Arc<IdDistributer>) -> Arena<T, IndexT> {
+    pub fn new(distributer: Arc<IdDistributer>) -> Arena<T, IndexT> {
         Arena {
-            context: Arc::clone(context),
+            distributer: distributer,
             container: HashMap::new(),
         }
     }
@@ -38,6 +38,10 @@ impl<T, IndexT: ArenaIndex> Arena<T, IndexT> {
         let idx = IndexT::new(self.alloc_id());
         self.container.insert(idx, create(idx));
         idx
+    }
+
+    pub fn alloc(&mut self) -> IndexT {
+        IndexT::new(self.alloc_id())
     }
 
     pub fn fill_back(&mut self, i: IndexT, item: T) {
@@ -77,23 +81,11 @@ impl<T, IndexT: ArenaIndex> Arena<T, IndexT> {
         self.container.is_empty()
     }
 
-    pub fn merge(&mut self, other: &mut Arena<T, IndexT>) {
-        let idxs: Vec<IndexT> = other.container.iter().map(|(k, _)| *k).collect();
-        for idx in idxs {
-            let value = other.remove(idx).unwrap();
+    pub fn merge(&mut self, other: Arena<T, IndexT>) {
+        for (idx, value) in other {
             self.fill_back(idx, value);
         }
     }
-    // pub fn merge_transformed<F>(&mut self, other: &mut Arena<T, IndexT>, trans: F)
-    // where
-    //     F: FnOnce(T) -> T,
-    // {
-    //     let idxs: Vec<IndexT> = other.container.iter().map(|(k, v)| *k).collect();
-    //     for idx in idxs {
-    //         let value = other.remove(idx).unwrap();
-    //         self.fill_back(idx, trans(value));
-    //     }
-    // }
 
     pub fn iter(&self) -> Iter<'_, IndexT, T> {
         self.container.iter()
@@ -103,7 +95,7 @@ impl<T, IndexT: ArenaIndex> Arena<T, IndexT> {
     }
 
     fn alloc_id(&self) -> usize {
-        self.context.alloc()
+        self.distributer.alloc()
     }
 }
 
