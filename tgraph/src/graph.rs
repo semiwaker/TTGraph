@@ -290,7 +290,7 @@ impl<'a, NDataT, EDataT> Transaction<'a, NDataT, EDataT> {
         }
     }
 
-    pub fn giveup(&mut self) {
+    pub fn give_up(&mut self) {
         self.committed = true;
     }
 }

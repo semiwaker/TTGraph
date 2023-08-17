@@ -56,6 +56,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         for (i, f) in t.update_nodes {
             self.update_node(i, f)
         }
+        for (old, new) in t.replace_nodes {
+            self.replace_node(old, new);
+        }
         for n in &t.dec_nodes {
             self.remove_node(*n);
         }
@@ -104,6 +107,17 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         }
     }
 
+    fn replace_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+        let old_link = self.back_links.remove(&old_node).unwrap();
+        self.back_links.insert(old_node, HashSet::new());
+
+        let new_link = self.back_links.entry(new_node).or_insert(HashSet::new());
+        for (y, s) in old_link {
+            new_link.insert((y, s));
+            self.nodes.get_mut(y).unwrap().modify(s, old_node, new_node);
+        }
+    }
+
     fn add_back_link(&mut self, x: NodeIndex, n: &NodeT) {
         self.back_links.entry(x).or_insert(HashSet::new());
         for (y, s) in n.iter_source() {
@@ -131,6 +145,7 @@ pub struct Transaction<'a, NodeT: NodeEnum> {
     dec_nodes: Vec<NodeIndex>,
     mut_nodes: Vec<(NodeIndex, Box<dyn FnOnce(&mut NodeT) + 'a>)>,
     update_nodes: Vec<(NodeIndex, Box<dyn FnOnce(NodeT) -> NodeT + 'a>)>,
+    replace_nodes: Vec<(NodeIndex, NodeIndex)>,
 }
 
 impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
@@ -143,6 +158,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
             dec_nodes: Vec::new(),
             mut_nodes: Vec::new(),
             update_nodes: Vec::new(),
+            replace_nodes: Vec::new(),
         }
     }
 
@@ -188,6 +204,13 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
         } else {
             self.update_nodes.push((node, Box::new(func)));
         }
+    }
+
+    pub fn replace_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+        // if !self.inc_nodes.contains(new_node) {
+        //     panic!("New node is not added into the transaction!")
+        // }
+        self.replace_nodes.push((old_node, new_node));
     }
 
     pub fn giveup(&mut self) {

@@ -37,7 +37,7 @@ impl<EDataT: Display> Display for Edge<EDataT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Edge{{ idx: {}, data: {}, from: {}, to: {}",
+            "Edge{{ idx: {}, data: {}, from: {}, to: {} }}",
             &self.idx.0, &self.data, &self.from.0, &self.to.0
         )?;
         std::fmt::Result::Ok(())
