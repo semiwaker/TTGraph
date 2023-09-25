@@ -12,6 +12,15 @@ pub mod library;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeIndex(pub usize);
 
+impl NodeIndex {
+    pub fn empty() -> NodeIndex {
+        NodeIndex(0)
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+}
+
 impl ArenaIndex for NodeIndex {
     fn new(id: usize) -> Self {
         NodeIndex(id)
@@ -74,7 +83,12 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     fn remove_node(&mut self, idx: NodeIndex) {
         let n = self.nodes.remove(idx).unwrap();
         self.remove_back_link(idx, &n);
-        self.back_links.remove(&idx).unwrap();
+        for (y, s) in self.back_links.remove(&idx).unwrap() {
+            self.nodes
+                .get_mut(y)
+                .unwrap()
+                .modify(s, idx, NodeIndex::empty());
+        }
     }
 
     fn modify_node<F>(&mut self, i: NodeIndex, f: F)

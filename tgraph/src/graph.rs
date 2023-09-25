@@ -34,6 +34,15 @@ pub struct Edge<EDataT> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeIndex(pub usize);
 
+impl NodeIndex {
+    pub fn empty() -> NodeIndex {
+        NodeIndex(0)
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+}
+
 impl ArenaIndex for NodeIndex {
     fn new(id: usize) -> Self {
         NodeIndex(id)
@@ -45,6 +54,15 @@ pub struct EdgeIndex(pub usize);
 impl ArenaIndex for EdgeIndex {
     fn new(id: usize) -> Self {
         EdgeIndex(id)
+    }
+}
+
+impl EdgeIndex {
+    pub fn empty() -> EdgeIndex {
+        EdgeIndex(0)
+    }
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
     }
 }
 
