@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+
 #[cfg(test)]
 mod tests_typed {
     use std::collections::HashSet;
@@ -12,9 +16,16 @@ mod tests_typed {
         from: HashSet<NodeIndex>,
     }
 
+    #[derive(IndexEnum)]
+    enum NIEnum {
+        A(NodeIndex),
+        B(NodeIndex),
+    }
+
     #[derive(TypedNode)]
     struct NodeB {
         a: NodeIndex,
+        x: NIEWrap<NIEnum>,
     }
 
     #[derive(NodeEnum)]
@@ -31,5 +42,7 @@ mod tests_typed {
         for (idx, n) in NodeA::iter_by_type(&graph) {}
         for (idx, n) in NodeB::iter_by_type(&graph) {}
         for (idx, n) in Edge::iter_by_type(&graph) {}
+
+        let b: NodeB;
     }
 }

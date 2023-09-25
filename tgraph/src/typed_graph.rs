@@ -253,3 +253,12 @@ pub trait NodeEnum {
     fn iter_source(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
     fn modify(&mut self, source: Self::SourceEnum, old_idx: NodeIndex, new_idx: NodeIndex);
 }
+
+pub trait IndexEnum {
+    fn modify(&mut self, new_idx: NodeIndex);
+    fn index(&self) -> NodeIndex;
+}
+
+pub struct NIEWrap<T: IndexEnum> {
+    pub value: T,
+}

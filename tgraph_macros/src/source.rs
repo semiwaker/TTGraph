@@ -1,29 +1,46 @@
 use change_case::pascal_case;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{parse_quote, Fields, Generics, Ident, ItemStruct, Path, Type, Visibility};
+use syn::{parse_quote, Fields, Generics, Ident, ItemStruct, PathArguments, Type, Visibility};
 
 #[derive(Debug)]
 pub enum ConnectType {
     Direct(Ident, Ident),
     Set(Ident, Ident),
+    Enum(Ident, Ident),
 }
 
 pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
     let Fields::Named(fields) = & input.fields else {panic!("Impossible!")};
+    // eprintln!("{:?}", fields.named);
     let mut result = Vec::new();
-    let direct_path1: Path = parse_quote!(tgraph::typed_graph::NodeIndex);
-    let direct_path2: Path = parse_quote!(typed_graph::NodeIndex);
-    let set_path1: Path = parse_quote!(HashSet<NodeIndex>);
-    let set_path2: Path = parse_quote!(std::collections::HashSet<NodeIndex>);
-    let set_path3: Path = parse_quote!(collections::HashSet<NodeIndex>);
+    let direct_paths = vec![
+        parse_quote!(tgraph::typed_graph::NodeIndex),
+        parse_quote!(typed_graph::NodeIndex),
+        parse_quote!(NodeIndex),
+    ];
+    let mut set_paths = Vec::new();
+    for dpath in &direct_paths {
+        set_paths.push(parse_quote!(std::collections::HashSet<#dpath>));
+        set_paths.push(parse_quote!(collections::HashSet<#dpath>));
+        set_paths.push(parse_quote!(HashSet<#dpath>));
+    }
     for f in &fields.named {
         let ident = f.ident.clone().unwrap();
         if let Type::Path(p) = &f.ty {
-            if p.path.is_ident("NodeIndex") || p.path == direct_path1 || p.path == direct_path2 {
+            if direct_paths.contains(p) {
                 result.push(ConnectType::Direct(ident.clone(), upper_camel(&ident)))
-            } else if p.path == set_path1 || p.path == set_path2 || p.path == set_path3 {
+            } else if set_paths.contains(p) {
                 result.push(ConnectType::Set(ident.clone(), upper_camel(&ident)))
+            } else if let PathArguments::AngleBracketed(a) =
+                &p.path.segments.last().unwrap().arguments
+            {
+                let path1 = parse_quote!(tgraph::typed_graph::NIEWrap #a);
+                let path2 = parse_quote!(typed_graph::NIEWrap #a);
+                let path3 = parse_quote!(NIEWrap #a);
+                if p.path == path1 || p.path == path2 || p.path == path3 {
+                    result.push(ConnectType::Enum(ident.clone(), upper_camel(&ident)))
+                }
             }
         }
     }
@@ -42,6 +59,7 @@ pub fn make_enum(
         match &s {
             ConnectType::Direct(_, camel) => vars.push(quote! {#camel}),
             ConnectType::Set(_, camel) => vars.push(quote! {#camel}),
+            ConnectType::Enum(_, camel) => vars.push(quote! {#camel}),
         }
     }
     quote! {
@@ -76,6 +94,9 @@ pub fn make_iter(
                     sources.push((*i, #source_enum::#camel));
                 }
             }),
+            ConnectType::Enum(ident, camel) => add_source_ops.push(quote! {
+                sources.push((tgraph::typed_graph::IndexEnum::index(&node.#ident.value), #source_enum::#camel));
+            }),
         }
     }
 
@@ -90,6 +111,11 @@ pub fn make_iter(
                     self.#ident.remove(&old_idx);
                     self.#ident.insert(new_idx);
                 },
+            },
+            ConnectType::Enum(ident, camel) => quote! {
+                #source_enum::#camel => {
+                    tgraph::typed_graph::IndexEnum::modify(&mut self.#ident.value, new_idx);
+                }
             },
         })
     }
