@@ -109,7 +109,9 @@ pub fn make_iter(
             ConnectType::Set(ident, camel) => quote! {
                 #source_enum::#camel => {
                     self.#ident.remove(&old_idx);
-                    self.#ident.insert(new_idx);
+                    if !new_idx.is_empty() {
+                        self.#ident.insert(new_idx);
+                    }
                 },
             },
             ConnectType::Enum(ident, camel) => quote! {
