@@ -14,6 +14,7 @@ mod tests_typed {
     struct NodeA {
         to: NodeIndex,
         from: HashSet<NodeIndex>,
+        values: Vec<NodeIndex>,
     }
 
     #[derive(IndexEnum)]

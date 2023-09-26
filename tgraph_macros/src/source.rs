@@ -7,6 +7,7 @@ use syn::{parse_quote, Fields, Generics, Ident, ItemStruct, PathArguments, Type,
 pub enum ConnectType {
     Direct(Ident, Ident),
     Set(Ident, Ident),
+    Vec(Ident, Ident),
     Enum(Ident, Ident),
 }
 
@@ -25,6 +26,12 @@ pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
         set_paths.push(parse_quote!(collections::HashSet<#dpath>));
         set_paths.push(parse_quote!(HashSet<#dpath>));
     }
+    let mut vec_paths = Vec::new();
+    for dpath in &direct_paths {
+        vec_paths.push(parse_quote!(std::vec::Vec<#dpath>));
+        vec_paths.push(parse_quote!(vec::Vec<#dpath>));
+        vec_paths.push(parse_quote!(Vec<#dpath>));
+    }
     for f in &fields.named {
         let ident = f.ident.clone().unwrap();
         if let Type::Path(p) = &f.ty {
@@ -32,6 +39,8 @@ pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
                 result.push(ConnectType::Direct(ident.clone(), upper_camel(&ident)))
             } else if set_paths.contains(p) {
                 result.push(ConnectType::Set(ident.clone(), upper_camel(&ident)))
+            } else if vec_paths.contains(p) {
+                result.push(ConnectType::Vec(ident.clone(), upper_camel(&ident)))
             } else if let PathArguments::AngleBracketed(a) =
                 &p.path.segments.last().unwrap().arguments
             {
@@ -59,6 +68,7 @@ pub fn make_enum(
         match &s {
             ConnectType::Direct(_, camel) => vars.push(quote! {#camel}),
             ConnectType::Set(_, camel) => vars.push(quote! {#camel}),
+            ConnectType::Vec(_, camel) => vars.push(quote! {#camel(usize)}),
             ConnectType::Enum(_, camel) => vars.push(quote! {#camel}),
         }
     }
@@ -94,6 +104,11 @@ pub fn make_iter(
                     sources.push((*i, #source_enum::#camel));
                 }
             }),
+            ConnectType::Vec(ident, camel) => add_source_ops.push(quote! {
+                for (idx, i) in node.#ident.iter().enumerate() {
+                    sources.push((*i, #source_enum::#camel(idx)));
+                }
+            }),
             ConnectType::Enum(ident, camel) => add_source_ops.push(quote! {
                 sources.push((tgraph::typed_graph::IndexEnum::index(&node.#ident.value), #source_enum::#camel));
             }),
@@ -112,6 +127,11 @@ pub fn make_iter(
                     if !new_idx.is_empty() {
                         self.#ident.insert(new_idx);
                     }
+                },
+            },
+            ConnectType::Vec(ident, camel) => quote! {
+                #source_enum::#camel(idx) => {
+                    self.#ident[idx] = new_idx;
                 },
             },
             ConnectType::Enum(ident, camel) => quote! {

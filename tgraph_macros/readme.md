@@ -8,6 +8,7 @@ struct NodeName{
     x: NodeIndex, // Direct link
     ys: HashSet<NodeIndex> // Set link
     z: NIEWrap<NIEnum> // Enum link
+    u: Vec<NodeIndex> // Vec link
     irelevant_members: WhatEver
 }
 ```
@@ -23,7 +24,8 @@ Generated Source(names are camel-cased):
 #vis enum NodeNameSource{
     X,
     Ys,
-    Z
+    Z,
+    U(usize)
 }
 ```
 
@@ -52,6 +54,9 @@ impl tgraph::typed_graph::TypedNode for NodeNameIterator {
             }
             NodeNameSource::Z => { // enum link
                 tgraph::typed_graph::IndexEnum::modify(&mut self.z.value, new_idx);
+            }
+            NodeNameSource::U(idx) => { // vec link
+                self.u[idx] = new_idx;
             }
         }
     }
