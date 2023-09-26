@@ -42,10 +42,11 @@ pub fn node_enum(the_enum: TokenStream) -> TokenStream {
 
     let mut result = proc_macro2::TokenStream::new();
     // the_enum.to_tokens(&mut stream);
-    let trait_ident = format_ident!("Iter{}ByType", enumt);
+    let trait_ident = format_ident!("TGGenTrait{}", enumt);
     quote! {
         trait #trait_ident<'a, IterT> {
             fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<#enumt>) -> IterT;
+            fn get_by_type<'b>(graph: &'b tgraph::typed_graph::Graph<#enumt>, idx: tgraph::typed_graph::NodeIndex) -> Option<&'b Self>;
         }
     }
     .to_tokens(&mut result);

@@ -40,9 +40,9 @@ mod tests_typed {
         let context = Context::new();
         let mut graph = Graph::<NodeType>::new(&context);
         for (idx, n) in NodeA::iter_by_type(&graph) {}
-        for (idx, n) in NodeB::iter_by_type(&graph) {}
+        for (idx, n) in NodeB::iter_by_type(&graph) {
+            let b = NodeB::get_by_type(&graph, idx);
+        }
         for (idx, n) in Edge::iter_by_type(&graph) {}
-
-        let b: NodeB;
     }
 }

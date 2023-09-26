@@ -19,6 +19,9 @@ pub fn make_iterator_impl(
                     it: graph.iter_nodes(),
                 }
             }
+            fn get_by_type<'b>(graph: &'b tgraph::typed_graph::Graph<#enumt>, idx: tgraph::typed_graph::NodeIndex) -> Option<&#ty>{
+                graph.get_node(idx).and_then(|x| if let #enumt::#ident(y) = x { Some(y) } else { None })
+            }
         }
 
         #vis struct #iter_ident<'a> {

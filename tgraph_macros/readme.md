@@ -101,18 +101,25 @@ enum NodeType {
 
 Variants should have exactly the form `Name(Type)`
 
-### IterByType
+### GeneratedTrait
 
 ```rust
 // Generated helper trait
-trait IterNodeTypeByType<'a, IterT> {
+trait TGGenTraitNodeType<'a, IterT> {
     fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>) -> IterT;
+    fn get_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>, idx: tgraph::typed_graph::NodeIndex)
+       -> Option<&Self>;
 }
 
 // Impl For NodeA
-impl<'a> IterNodeTypeByType<'a, IterA<'a>> for NodeA {
+impl<'a> TGGenTraitNodeType<'a, IterA<'a>> for NodeA {
     fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>) -> IterA<'a> {
         IterA { it: graph.iter_nodes() }
+    }
+    fn get_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>, idx: tgraph::typed_graph::NodeIndex)
+       -> Option<&NodeA>
+    {
+        // ...
     }
 }
 
