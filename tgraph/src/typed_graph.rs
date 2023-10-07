@@ -5,6 +5,8 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
 
+use uuid::Uuid;
+
 use crate::arena::*;
 
 pub mod library;
@@ -29,6 +31,7 @@ impl ArenaIndex for NodeIndex {
 
 #[derive(Debug, Clone)]
 pub struct Graph<NodeT: NodeEnum> {
+    ctx_id: Uuid,
     nodes: Arena<NodeT, NodeIndex>,
     back_links: HashMap<NodeIndex, HashSet<(NodeIndex, NodeT::SourceEnum)>>,
 }
@@ -36,6 +39,7 @@ pub struct Graph<NodeT: NodeEnum> {
 impl<NodeT: NodeEnum> Graph<NodeT> {
     pub fn new(context: &Context) -> Self {
         Graph {
+            ctx_id: context.id,
             nodes: Arena::new(Arc::clone(&context.node_dist)),
             back_links: HashMap::new(),
         }
@@ -152,8 +156,17 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
 pub type Iter<'a, NDataT> = hash_map::Iter<'a, NodeIndex, NDataT>;
 
+impl<T: NodeEnum> IntoIterator for Graph<T> {
+    type Item = (NodeIndex, T);
+    type IntoIter = hash_map::IntoIter<NodeIndex, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.nodes.into_iter()
+    }
+}
+
 pub struct Transaction<'a, NodeT: NodeEnum> {
     committed: bool,
+    ctx_id: Uuid,
     alloc_nodes: HashSet<NodeIndex>,
     inc_nodes: Arena<NodeT, NodeIndex>,
     dec_nodes: Vec<NodeIndex>,
@@ -167,6 +180,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
         let node_dist = Arc::clone(&context.node_dist);
         Transaction {
             committed: false,
+            ctx_id: context.id,
             alloc_nodes: HashSet::new(),
             inc_nodes: Arena::new(node_dist),
             dec_nodes: Vec::new(),
@@ -227,6 +241,17 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
         self.replace_nodes.push((old_node, new_node));
     }
 
+    pub fn merge_graph(&mut self, graph: Graph<NodeT>) {
+        let graph_ctx_id = graph.ctx_id;
+        for (i, n) in graph.into_iter() {
+            if self.ctx_id != graph_ctx_id {
+                self.new_node(n);
+            } else {
+                self.fill_back_node(i, n);
+            }
+        }
+    }
+
     pub fn giveup(&mut self) {
         self.committed = true;
     }
@@ -234,11 +259,13 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
 
 #[derive(Debug)]
 pub struct Context {
+    id: Uuid,
     node_dist: Arc<IdDistributer>,
 }
 impl Context {
     pub fn new() -> Context {
         Context {
+            id: Uuid::new_v4(),
             node_dist: Arc::new(IdDistributer::new()),
         }
     }
@@ -246,6 +273,7 @@ impl Context {
 impl Clone for Context {
     fn clone(&self) -> Self {
         Context {
+            id: self.id,
             node_dist: Arc::clone(&self.node_dist),
         }
     }

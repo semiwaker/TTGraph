@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 visible = "0.0.1"
-tgraph_macros = {path="../tgraph_macros"}
+uuid = { version = "1.4.1", features = ["v4", "fast-rng"] }
+tgraph_macros = { path = "../tgraph_macros" }
