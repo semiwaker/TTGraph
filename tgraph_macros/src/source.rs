@@ -9,6 +9,7 @@ pub enum ConnectType {
     Set(Ident, Ident),
     Vec(Ident, Ident),
     Enum(Ident, Ident),
+    Empty,
 }
 
 pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
@@ -53,6 +54,9 @@ pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
             }
         }
     }
+    if result.len() == 0 {
+        result.push(ConnectType::Empty);
+    }
     result
 }
 
@@ -70,6 +74,7 @@ pub fn make_enum(
             ConnectType::Set(_, camel) => vars.push(quote! {#camel}),
             ConnectType::Vec(_, camel) => vars.push(quote! {#camel(usize)}),
             ConnectType::Enum(_, camel) => vars.push(quote! {#camel}),
+            ConnectType::Empty => vars.push(quote! {Empty}),
         }
     }
     quote! {
@@ -112,6 +117,7 @@ pub fn make_iter(
             ConnectType::Enum(ident, camel) => add_source_ops.push(quote! {
                 sources.push((tgraph::typed_graph::IndexEnum::index(&node.#ident.value), #source_enum::#camel));
             }),
+            ConnectType::Empty => {}
         }
     }
 
@@ -138,6 +144,9 @@ pub fn make_iter(
                 #source_enum::#camel => {
                     tgraph::typed_graph::IndexEnum::modify(&mut self.#ident.value, new_idx);
                 }
+            },
+            ConnectType::Empty => quote! {
+                #source_enum::Empty => {}
             },
         })
     }

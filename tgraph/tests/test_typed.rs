@@ -36,6 +36,11 @@ mod tests_typed {
         Edge(Edge<i32>),
     }
 
+    #[derive(TypedNode, Clone)]
+    struct NodeEmpty {
+        x: usize,
+    }
+
     #[test]
     fn can_compile() {
         let context = Context::new();
