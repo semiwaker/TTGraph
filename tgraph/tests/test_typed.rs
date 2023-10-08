@@ -65,6 +65,7 @@ mod tests_typed {
         for (idx, n) in NodeB::iter_by_type(&graph) {
             eprintln!("{:?} {:?}", idx, n);
         }
+        println!("{:?}", graph);
         // for (idx, n) in NodeA::iter_by_type(&graph) {}
         // for (idx, n) in NodeB::iter_by_type(&graph) {
         // let b = NodeB::get_by_type(&graph, idx);

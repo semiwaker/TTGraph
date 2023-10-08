@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::arena::*;
 
+pub mod debug;
 pub mod library;
+pub use debug::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeIndex(pub usize);
@@ -29,7 +31,7 @@ impl ArenaIndex for NodeIndex {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Graph<NodeT: NodeEnum> {
     ctx_id: Uuid,
     nodes: Arena<NodeT, NodeIndex>,
