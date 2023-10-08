@@ -10,11 +10,9 @@ mod tests_typed {
     use tgraph::typed_graph::*;
     use tgraph_macros::*;
 
-    #[derive(TypedNode)]
+    #[derive(TypedNode, Debug)]
     struct NodeA {
         to: NodeIndex,
-        from: HashSet<NodeIndex>,
-        values: Vec<NodeIndex>,
     }
 
     #[derive(IndexEnum)]
@@ -23,17 +21,16 @@ mod tests_typed {
         B(NodeIndex),
     }
 
-    #[derive(TypedNode)]
+    #[derive(TypedNode, Debug)]
     struct NodeB {
         a: NodeIndex,
-        x: NIEWrap<NIEnum>,
+        x: NodeIndex,
     }
 
-    #[derive(NodeEnum)]
+    #[derive(NodeEnum, Debug)]
     enum NodeType {
         A(NodeA),
         B(NodeB),
-        Edge(Edge<i32>),
         Empty(NodeEmpty),
     }
 
@@ -47,9 +44,25 @@ mod tests_typed {
         let context = Context::new();
         let mut graph = Graph::<NodeType>::new(&context);
         let mut trans = Transaction::new(&context);
-        trans.new_node(NodeType::Empty(NodeEmpty { x: 0 }));
+        let n = trans.new_node(NodeType::Empty(NodeEmpty { x: 0 }));
         graph.commit(trans);
         for (idx, n) in NodeEmpty::iter_by_type(&graph) {
+            eprintln!("{:?} {:?}", idx, n);
+        }
+
+        let mut trans = Transaction::new(&context);
+        let b = trans.alloc_node();
+        let a = trans.new_node(NodeType::A(NodeA { to: b }));
+        trans.fill_back_node(b, NodeType::B(NodeB { a: a, x: n }));
+
+        graph.commit(trans);
+        for (idx, n) in graph.iter_nodes() {
+            eprintln!("{:?} {:?}", idx, n);
+        }
+        for (idx, n) in NodeA::iter_by_type(&graph) {
+            eprintln!("{:?} {:?}", idx, n);
+        }
+        for (idx, n) in NodeB::iter_by_type(&graph) {
             eprintln!("{:?} {:?}", idx, n);
         }
         // for (idx, n) in NodeA::iter_by_type(&graph) {}

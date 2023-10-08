@@ -34,7 +34,7 @@ pub fn make_iterator_impl(
                     if let #enumt::#ident(x) = node {
                         Some((*idx, x))
                     } else {
-                        None
+                        self.next()
                     }
                 )
             }
