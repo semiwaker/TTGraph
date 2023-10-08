@@ -64,6 +64,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
             return;
         }
 
+        for (old, new) in t.replace_old_nodes {
+            self.replace_node(old, new);
+        }
         self.merge_nodes(t.inc_nodes);
         for (i, f) in t.mut_nodes {
             self.modify_node(i, f)
@@ -175,6 +178,7 @@ pub struct Transaction<'a, NodeT: NodeEnum> {
     mut_nodes: Vec<(NodeIndex, Box<dyn FnOnce(&mut NodeT) + 'a>)>,
     update_nodes: Vec<(NodeIndex, Box<dyn FnOnce(NodeT) -> NodeT + 'a>)>,
     replace_nodes: Vec<(NodeIndex, NodeIndex)>,
+    replace_old_nodes: Vec<(NodeIndex, NodeIndex)>,
 }
 
 impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
@@ -189,6 +193,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
             mut_nodes: Vec::new(),
             update_nodes: Vec::new(),
             replace_nodes: Vec::new(),
+            replace_old_nodes: Vec::new(),
         }
     }
 
@@ -237,12 +242,11 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
     }
 
     pub fn replace_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
-        // if !self.inc_nodes.contains(new_node) {
-        //     panic!("New node is not added into the transaction!")
-        // }
         self.replace_nodes.push((old_node, new_node));
     }
-
+    pub fn replace_old_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+        self.replace_old_nodes.push((old_node, new_node));
+    }
     pub fn merge_graph(&mut self, graph: Graph<NodeT>) {
         let graph_ctx_id = graph.ctx_id;
         for (i, n) in graph.into_iter() {
