@@ -31,7 +31,7 @@ pub fn make_iterator_impl(
             type Item = (NodeIndex, &'a #ty);
             fn next(&mut self) -> Option<Self::Item> {
                 self.it.next().and_then(|(idx, node)|
-                    if let #enumt::#ident(x) = &node {
+                    if let #enumt::#ident(x) = node {
                         Some((*idx, x))
                     } else {
                         None
