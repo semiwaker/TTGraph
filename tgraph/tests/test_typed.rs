@@ -72,4 +72,43 @@ mod tests_typed {
     // }
     // for (idx, n) in Edge::iter_by_type(&graph) {}
   }
+
+  #[derive(TypedNode, Debug)]
+  struct CNode {
+    tos: HashSet<NodeIndex>,
+  }
+
+  #[derive(NodeEnum, Debug)]
+  enum TestNode {
+    CNode(CNode),
+  }
+
+  #[test]
+  fn redirect_test() {
+    let context = Context::new();
+    let mut graph = Graph::<TestNode>::new(&context);
+    let mut trans = Transaction::new(&context);
+
+    let a = trans.alloc_node();
+    let b = trans.alloc_node();
+    let c = trans.alloc_node();
+    let d = trans.new_node(TestNode::CNode(CNode { tos: HashSet::new() }));
+    trans.fill_back_node(c, TestNode::CNode(CNode { tos: HashSet::from_iter([d]) }));
+    trans.fill_back_node(b, TestNode::CNode(CNode { tos: HashSet::from_iter([c, d]) }));
+    trans
+      .fill_back_node(a, TestNode::CNode(CNode { tos: HashSet::from_iter([b, c, d]) }));
+
+    graph.commit(trans);
+
+    println!("{:?}", graph);
+    trans = Transaction::new(&context);
+
+    trans.redirect_node(c, b);
+    trans.redirect_node(b, a);
+    trans.redirect_node(d, c);
+
+    graph.commit(trans);
+
+    println!("{:?}", graph);
+  }
 }

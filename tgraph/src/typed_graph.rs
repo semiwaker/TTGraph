@@ -53,9 +53,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       return;
     }
 
-    for (old, new) in t.replace_old_nodes {
-      self.replace_node(old, new);
-    }
+    self.redirect_node_vec(t.redirect_nodes);
     self.merge_nodes(t.inc_nodes);
     for (i, f) in t.mut_nodes {
       self.modify_node(i, f)
@@ -63,9 +61,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     for (i, f) in t.update_nodes {
       self.update_node(i, f)
     }
-    for (old, new) in t.replace_nodes {
-      self.replace_node(old, new);
-    }
+    self.redirect_node_vec(t.redirect_all_nodes);
     for n in &t.dec_nodes {
       self.remove_node(*n);
     }
@@ -112,7 +108,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  fn replace_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+  fn redirect_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
     let old_link = self.back_links.remove(&old_node).unwrap();
     self.back_links.insert(old_node, HashSet::new());
 
@@ -120,6 +116,42 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     for (y, s) in old_link {
       new_link.insert((y, s));
       self.nodes.get_mut(y).unwrap().modify(s, old_node, new_node);
+    }
+  }
+
+  fn redirect_node_vec(&mut self, replacements: Vec<(NodeIndex, NodeIndex)>) {
+    let mut fa = HashMap::new();
+
+    for (old, new) in &replacements {
+      fa.entry(*old).or_insert(*old);
+      fa.entry(*new).or_insert(*new);
+    }
+
+    for (old, new) in &replacements {
+      let mut x = *new;
+      while fa[&x] != x {
+        x = fa[&x];
+      }
+      assert!(x != *old, "Loop redirection detected!");
+      *fa.get_mut(old).unwrap() = x;
+    }
+
+    for (old, new) in &replacements {
+      let mut x = *new;
+      let mut y = fa[&x];
+      while x != y {
+        x = y;
+        y = fa[&y];
+      }
+
+      self.redirect_node(*old, x);
+
+      x = *new;
+      while fa[&x] != y {
+        let z = fa[&x];
+        *fa.get_mut(&x).unwrap() = y;
+        x = z;
+      }
     }
   }
 
@@ -154,8 +186,8 @@ pub struct Transaction<'a, NodeT: NodeEnum> {
   dec_nodes: Vec<NodeIndex>,
   mut_nodes: Vec<(NodeIndex, Box<dyn FnOnce(&mut NodeT) + 'a>)>,
   update_nodes: Vec<(NodeIndex, Box<dyn FnOnce(NodeT) -> NodeT + 'a>)>,
-  replace_nodes: Vec<(NodeIndex, NodeIndex)>,
-  replace_old_nodes: Vec<(NodeIndex, NodeIndex)>,
+  redirect_all_nodes: Vec<(NodeIndex, NodeIndex)>,
+  redirect_nodes: Vec<(NodeIndex, NodeIndex)>,
 }
 
 impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
@@ -169,8 +201,8 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
       dec_nodes: Vec::new(),
       mut_nodes: Vec::new(),
       update_nodes: Vec::new(),
-      replace_nodes: Vec::new(),
-      replace_old_nodes: Vec::new(),
+      redirect_all_nodes: Vec::new(),
+      redirect_nodes: Vec::new(),
     }
   }
 
@@ -212,12 +244,12 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
     }
   }
 
-  pub fn replace_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
-    self.replace_nodes.push((old_node, new_node));
+  pub fn redirect_all_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+    self.redirect_all_nodes.push((old_node, new_node));
   }
 
-  pub fn replace_old_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
-    self.replace_old_nodes.push((old_node, new_node));
+  pub fn redirect_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+    self.redirect_nodes.push((old_node, new_node));
   }
 
   pub fn merge_graph(&mut self, graph: Graph<NodeT>) {
