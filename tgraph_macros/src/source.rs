@@ -28,6 +28,9 @@ pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
     set_paths.push(parse_quote!(std::collections::HashSet<#dpath>));
     set_paths.push(parse_quote!(collections::HashSet<#dpath>));
     set_paths.push(parse_quote!(HashSet<#dpath>));
+    set_paths.push(parse_quote!(std::collections::BTreeSet<#dpath>));
+    set_paths.push(parse_quote!(collections::BTreeSet<#dpath>));
+    set_paths.push(parse_quote!(BTreeSet<#dpath>));
   }
   let mut vec_paths = Vec::new();
   for dpath in &direct_paths {

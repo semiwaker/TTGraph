@@ -1,6 +1,6 @@
 // typed graph
 
-use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -10,8 +10,8 @@ use uuid::Uuid;
 use crate::arena::*;
 
 pub mod debug;
+pub mod display;
 pub mod library;
-pub use debug::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeIndex(pub usize);

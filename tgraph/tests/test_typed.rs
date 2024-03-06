@@ -4,9 +4,8 @@
 
 #[cfg(test)]
 mod tests_typed {
-  use std::collections::HashSet;
+  use std::collections::BTreeSet;
 
-  use tgraph::typed_graph::library::*;
   use tgraph::typed_graph::*;
   use tgraph_macros::*;
 
@@ -75,7 +74,7 @@ mod tests_typed {
 
   #[derive(TypedNode, Debug)]
   struct CNode {
-    tos: HashSet<NodeIndex>,
+    tos: BTreeSet<NodeIndex>,
   }
 
   #[derive(NodeEnum, Debug)]
@@ -92,15 +91,15 @@ mod tests_typed {
     let a = trans.alloc_node();
     let b = trans.alloc_node();
     let c = trans.alloc_node();
-    let d = trans.new_node(TestNode::CNode(CNode { tos: HashSet::new() }));
-    trans.fill_back_node(c, TestNode::CNode(CNode { tos: HashSet::from_iter([d]) }));
-    trans.fill_back_node(b, TestNode::CNode(CNode { tos: HashSet::from_iter([c, d]) }));
+    let d = trans.new_node(TestNode::CNode(CNode { tos: BTreeSet::new() }));
+    trans.fill_back_node(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
+    trans.fill_back_node(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
     trans
-      .fill_back_node(a, TestNode::CNode(CNode { tos: HashSet::from_iter([b, c, d]) }));
+      .fill_back_node(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
 
     graph.commit(trans);
 
-    println!("{:?}", graph);
+    println!("{}", graph);
     trans = Transaction::new(&context);
 
     trans.redirect_node(c, b);
@@ -109,6 +108,6 @@ mod tests_typed {
 
     graph.commit(trans);
 
-    println!("{:?}", graph);
+    println!("{}", graph);
   }
 }
