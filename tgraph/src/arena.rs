@@ -1,23 +1,24 @@
-use std::collections::hash_map::{self, Iter, IterMut};
-use std::collections::HashMap;
+use std::collections::{btree_map, btree_set, hash_map, BTreeMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
-pub trait ArenaIndex: Hash + PartialEq + Eq + Debug + Copy + Clone {
+pub trait ArenaIndex:
+  Hash + PartialEq + Eq + Debug + Copy + Clone + PartialOrd + Ord
+{
   fn new(id: usize) -> Self;
 }
 
 #[derive(Debug, Clone)]
 pub struct Arena<T, IndexT: ArenaIndex> {
   distributer: Arc<IdDistributer>,
-  container: HashMap<IndexT, T>,
+  container: BTreeMap<IndexT, T>,
 }
 
 impl<T, IndexT: ArenaIndex> Arena<T, IndexT> {
   pub fn new(distributer: Arc<IdDistributer>) -> Arena<T, IndexT> {
-    Arena { distributer, container: HashMap::new() }
+    Arena { distributer, container: BTreeMap::new() }
   }
 
   pub fn clear(&mut self) { self.container.clear() }
@@ -69,13 +70,17 @@ impl<T, IndexT: ArenaIndex> Arena<T, IndexT> {
 
   pub fn iter(&self) -> Iter<'_, IndexT, T> { self.container.iter() }
 
-  pub fn iter_mut(&mut self) -> IterMut<'_, IndexT, T> { self.container.iter_mut() }
+  pub fn iter_mut(&mut self) -> IterMut<IndexT, T> { self.container.iter_mut() }
 
   fn alloc_id(&self) -> usize { self.distributer.alloc() }
 }
 
+pub type Iter<'a, IndexT, T> = btree_map::Iter<'a, IndexT, T>;
+pub type IntoIter<IndexT, T> = btree_map::IntoIter<IndexT, T>;
+pub type IterMut<'a, IndexT, T> = btree_map::IterMut<'a, IndexT, T>;
+
 impl<T, IndexT: ArenaIndex> IntoIterator for Arena<T, IndexT> {
-  type IntoIter = hash_map::IntoIter<IndexT, T>;
+  type IntoIter = IntoIter<IndexT, T>;
   type Item = (IndexT, T);
 
   fn into_iter(self) -> Self::IntoIter { self.container.into_iter() }

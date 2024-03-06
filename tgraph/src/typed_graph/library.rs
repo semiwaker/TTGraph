@@ -19,5 +19,5 @@ pub struct Edge<T> {
 #[StructFields(pub)]
 pub struct Region<T> {
   data: T,
-  nodes: HashSet<NodeIndex>,
+  nodes: BTreeSet<NodeIndex>,
 }

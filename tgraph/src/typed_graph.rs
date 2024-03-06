@@ -1,6 +1,6 @@
 // typed graph
 
-use std::collections::{hash_map, HashMap, HashSet};
+use std::collections::{btree_map, BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ pub mod debug;
 pub mod library;
 pub use debug::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeIndex(pub usize);
 
 impl NodeIndex {
@@ -30,7 +30,7 @@ impl ArenaIndex for NodeIndex {
 pub struct Graph<NodeT: NodeEnum> {
   ctx_id: Uuid,
   nodes: Arena<NodeT, NodeIndex>,
-  back_links: HashMap<NodeIndex, HashSet<(NodeIndex, NodeT::SourceEnum)>>,
+  back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>>,
 }
 
 impl<NodeT: NodeEnum> Graph<NodeT> {
@@ -38,13 +38,13 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     Graph {
       ctx_id: context.id,
       nodes: Arena::new(Arc::clone(&context.node_dist)),
-      back_links: HashMap::new(),
+      back_links: BTreeMap::new(),
     }
   }
 
   pub fn get_node(&self, idx: NodeIndex) -> Option<&NodeT> { self.nodes.get(idx) }
 
-  pub fn iter_nodes(&self) -> Iter<'_, NodeT> { self.nodes.iter() }
+  pub fn iter_nodes(&self) -> Iter<'_, NodeIndex, NodeT> { self.nodes.iter() }
 
   pub fn len(&self) -> usize { self.nodes.len() }
 
@@ -110,9 +110,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
   fn redirect_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
     let old_link = self.back_links.remove(&old_node).unwrap();
-    self.back_links.insert(old_node, HashSet::new());
+    self.back_links.insert(old_node, BTreeSet::new());
 
-    let new_link = self.back_links.entry(new_node).or_insert(HashSet::new());
+    let new_link = self.back_links.entry(new_node).or_insert(BTreeSet::new());
     for (y, s) in old_link {
       new_link.insert((y, s));
       self.nodes.get_mut(y).unwrap().modify(s, old_node, new_node);
@@ -120,7 +120,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   fn redirect_node_vec(&mut self, replacements: Vec<(NodeIndex, NodeIndex)>) {
-    let mut fa = HashMap::new();
+    let mut fa = BTreeMap::new();
 
     for (old, new) in &replacements {
       fa.entry(*old).or_insert(*old);
@@ -156,9 +156,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   fn add_back_link(&mut self, x: NodeIndex, n: &NodeT) {
-    self.back_links.entry(x).or_insert(HashSet::new());
+    self.back_links.entry(x).or_insert(BTreeSet::new());
     for (y, s) in n.iter_source() {
-      self.back_links.entry(y).or_insert(HashSet::new()).insert((x, s));
+      self.back_links.entry(y).or_insert(BTreeSet::new()).insert((x, s));
     }
   }
 
@@ -169,10 +169,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 }
 
-pub type Iter<'a, NDataT> = hash_map::Iter<'a, NodeIndex, NDataT>;
-
 impl<T: NodeEnum> IntoIterator for Graph<T> {
-  type IntoIter = hash_map::IntoIter<NodeIndex, T>;
+  type IntoIter = IntoIter<NodeIndex, T>;
   type Item = (NodeIndex, T);
 
   fn into_iter(self) -> Self::IntoIter { self.nodes.into_iter() }
@@ -181,7 +179,7 @@ impl<T: NodeEnum> IntoIterator for Graph<T> {
 pub struct Transaction<'a, NodeT: NodeEnum> {
   committed: bool,
   ctx_id: Uuid,
-  alloc_nodes: HashSet<NodeIndex>,
+  alloc_nodes: BTreeSet<NodeIndex>,
   inc_nodes: Arena<NodeT, NodeIndex>,
   dec_nodes: Vec<NodeIndex>,
   mut_nodes: Vec<(NodeIndex, Box<dyn FnOnce(&mut NodeT) + 'a>)>,
@@ -196,7 +194,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
     Transaction {
       committed: false,
       ctx_id: context.id,
-      alloc_nodes: HashSet::new(),
+      alloc_nodes: BTreeSet::new(),
       inc_nodes: Arena::new(node_dist),
       dec_nodes: Vec::new(),
       mut_nodes: Vec::new(),
@@ -291,18 +289,18 @@ impl Clone for Context {
 pub trait SourceIterator<T: TypedNode>:
   Iterator<Item = (NodeIndex, Self::Source)>
 {
-  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash;
+  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   fn new(node: &T) -> Self;
 }
 pub trait TypedNode: Sized {
-  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash;
+  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   type Iter: SourceIterator<Self, Source = Self::Source>;
   fn iter_source(&self) -> Self::Iter;
   fn modify(&mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex);
 }
 
 pub trait NodeEnum {
-  type SourceEnum: Copy + Clone + Eq + PartialEq + Debug + Hash;
+  type SourceEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   fn iter_source(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
   fn modify(&mut self, source: Self::SourceEnum, old_idx: NodeIndex, new_idx: NodeIndex);
 }

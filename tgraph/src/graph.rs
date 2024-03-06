@@ -1,4 +1,4 @@
-use std::collections::{hash_map, HashSet};
+use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -17,8 +17,8 @@ pub use iter::*;
 pub struct Node<NDataT> {
   idx: NodeIndex,
   data: NDataT,
-  in_edges: HashSet<EdgeIndex>,
-  out_edges: HashSet<EdgeIndex>,
+  in_edges: BTreeSet<EdgeIndex>,
+  out_edges: BTreeSet<EdgeIndex>,
 }
 
 #[StructFields(pub)]
@@ -30,7 +30,7 @@ pub struct Edge<EDataT> {
   to: NodeIndex,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeIndex(pub usize);
 
 impl NodeIndex {
@@ -43,7 +43,7 @@ impl ArenaIndex for NodeIndex {
   fn new(id: usize) -> Self { NodeIndex(id) }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct EdgeIndex(pub usize);
 impl ArenaIndex for EdgeIndex {
   fn new(id: usize) -> Self { EdgeIndex(id) }
@@ -73,11 +73,11 @@ impl<NDataT, EDataT> Graph<NDataT, EDataT> {
 
   pub fn get_edge(&self, idx: EdgeIndex) -> Option<&Edge<EDataT>> { self.edges.get(idx) }
 
-  pub fn iter_nodes(&self) -> hash_map::Iter<'_, NodeIndex, Node<NDataT>> {
+  pub fn iter_nodes(&self) -> impl Iterator<Item = (&NodeIndex, &Node<NDataT>)> {
     self.nodes.iter()
   }
 
-  pub fn iter_edges(&self) -> hash_map::Iter<'_, EdgeIndex, Edge<EDataT>> {
+  pub fn iter_edges(&self) -> impl Iterator<Item = (&EdgeIndex, &Edge<EDataT>)> {
     self.edges.iter()
   }
 
@@ -200,8 +200,8 @@ impl<'a, NDataT, EDataT> Transaction<'a, NDataT, EDataT> {
     self.inc_nodes.insert_with(|idx| Node {
       idx,
       data,
-      in_edges: HashSet::new(),
-      out_edges: HashSet::new(),
+      in_edges: BTreeSet::new(),
+      out_edges: BTreeSet::new(),
     })
   }
 
