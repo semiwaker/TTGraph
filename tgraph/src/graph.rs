@@ -7,7 +7,6 @@ use visible::StructFields;
 pub use super::arena::*;
 
 mod display;
-pub use display::*;
 
 mod iter;
 pub use iter::*;
