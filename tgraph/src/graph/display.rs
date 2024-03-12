@@ -43,15 +43,15 @@ impl<EDataT: Display> Display for Edge<EDataT> {
 
 impl<NDataT: Display, EDataT: Display> Display for Graph<NDataT, EDataT> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "Graph {{\n  nodes: [\n")?;
+    writeln!(f, "Graph {{\n  nodes: [")?;
     for (_, n) in &self.nodes {
-      write!(f, "     {},\n", n)?;
+      writeln!(f, "     {},", n)?;
     }
-    write!(f, "  ],\n  edges: [\n")?;
+    writeln!(f, "  ],\n  edges: [")?;
     for (_, n) in &self.edges {
-      write!(f, "     {},\n", n)?;
+      writeln!(f, "     {},", n)?;
     }
-    write!(f, "  ]\n}}")?;
+    writeln!(f, "  ]}}")?;
     std::fmt::Result::Ok(())
   }
 }

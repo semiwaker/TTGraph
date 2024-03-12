@@ -166,16 +166,19 @@ impl<NDataT, EDataT> Graph<NDataT, EDataT> {
   }
 }
 
+type MutFunc<'a, T> = Box<dyn FnOnce(&mut T) + 'a>;
+type UpdateFunc<'a, T> = Box<dyn FnOnce(T) -> T + 'a>;
+
 pub struct Transaction<'a, NDataT, EDataT> {
   committed: bool,
   inc_nodes: Arena<Node<NDataT>, NodeIndex>,
   inc_edges: Arena<Edge<EDataT>, EdgeIndex>,
   dec_nodes: Vec<NodeIndex>,
   dec_edges: Vec<EdgeIndex>,
-  mut_nodes: Vec<(NodeIndex, Box<dyn FnOnce(&mut NDataT) + 'a>)>,
-  mut_edges: Vec<(EdgeIndex, Box<dyn FnOnce(&mut EDataT) + 'a>)>,
-  update_nodes: Vec<(NodeIndex, Box<dyn FnOnce(NDataT) -> NDataT + 'a>)>,
-  update_edges: Vec<(EdgeIndex, Box<dyn FnOnce(EDataT) -> EDataT + 'a>)>,
+  mut_nodes: Vec<(NodeIndex, MutFunc<'a, NDataT>)>,
+  mut_edges: Vec<(EdgeIndex, MutFunc<'a, EDataT>)>,
+  update_nodes: Vec<(NodeIndex, UpdateFunc<'a, NDataT>)>,
+  update_edges: Vec<(EdgeIndex, UpdateFunc<'a, EDataT>)>,
 }
 
 impl<'a, NDataT, EDataT> Transaction<'a, NDataT, EDataT> {
@@ -271,6 +274,9 @@ impl Context {
       edge_dist: Arc::new(IdDistributer::new()),
     }
   }
+}
+impl Default for Context {
+  fn default() -> Self { Self::new() }
 }
 impl Clone for Context {
   fn clone(&self) -> Self {

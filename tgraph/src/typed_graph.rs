@@ -48,6 +48,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
   pub fn len(&self) -> usize { self.nodes.len() }
 
+  pub fn is_empty(&self) -> bool { self.len() == 0 }
+
   pub fn commit(&mut self, t: Transaction<NodeT>) {
     if t.committed {
       return;
@@ -88,7 +90,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       self.back_links.get_mut(&y).unwrap().remove(&(i, s));
     }
 
-    f(&mut self.nodes.get_mut(i).unwrap());
+    f(self.nodes.get_mut(i).unwrap());
 
     for (y, s) in self.nodes.get(i).unwrap().iter_source() {
       self.back_links.get_mut(&y).unwrap().insert((i, s));
@@ -101,7 +103,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       self.back_links.get_mut(&y).unwrap().remove(&(i, s));
     }
 
-    self.nodes.update_with(i, |x| f(x));
+    self.nodes.update_with(i, f);
 
     for (y, s) in self.nodes.get(i).unwrap().iter_source() {
       self.back_links.get_mut(&y).unwrap().insert((i, s));
@@ -112,7 +114,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     let old_link = self.back_links.remove(&old_node).unwrap();
     self.back_links.insert(old_node, BTreeSet::new());
 
-    let new_link = self.back_links.entry(new_node).or_insert(BTreeSet::new());
+    let new_link = self.back_links.entry(new_node).or_default();
     for (y, s) in old_link {
       new_link.insert((y, s));
       self.nodes.get_mut(y).unwrap().modify(s, old_node, new_node);
@@ -156,9 +158,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   fn add_back_link(&mut self, x: NodeIndex, n: &NodeT) {
-    self.back_links.entry(x).or_insert(BTreeSet::new());
+    self.back_links.entry(x).or_default();
     for (y, s) in n.iter_source() {
-      self.back_links.entry(y).or_insert(BTreeSet::new()).insert((x, s));
+      self.back_links.entry(y).or_default().insert((x, s));
     }
   }
 
@@ -176,14 +178,17 @@ impl<T: NodeEnum> IntoIterator for Graph<T> {
   fn into_iter(self) -> Self::IntoIter { self.nodes.into_iter() }
 }
 
+type MutFunc<'a, T> = Box<dyn FnOnce(&mut T) + 'a>;
+type UpdateFunc<'a, T> = Box<dyn FnOnce(T) -> T + 'a>;
+
 pub struct Transaction<'a, NodeT: NodeEnum> {
   committed: bool,
   ctx_id: Uuid,
   alloc_nodes: BTreeSet<NodeIndex>,
   inc_nodes: Arena<NodeT, NodeIndex>,
   dec_nodes: Vec<NodeIndex>,
-  mut_nodes: Vec<(NodeIndex, Box<dyn FnOnce(&mut NodeT) + 'a>)>,
-  update_nodes: Vec<(NodeIndex, Box<dyn FnOnce(NodeT) -> NodeT + 'a>)>,
+  mut_nodes: Vec<(NodeIndex, MutFunc<'a, NodeT>)>,
+  update_nodes: Vec<(NodeIndex, UpdateFunc<'a, NodeT>)>,
   redirect_all_nodes: Vec<(NodeIndex, NodeIndex)>,
   redirect_nodes: Vec<(NodeIndex, NodeIndex)>,
 }
@@ -217,17 +222,15 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   pub fn new_node(&mut self, data: NodeT) -> NodeIndex { self.inc_nodes.insert(data) }
 
   pub fn remove_node(&mut self, node: NodeIndex) {
-    if self.inc_nodes.remove(node).is_none() {
-      if !self.alloc_nodes.remove(&node) {
-        self.dec_nodes.push(node);
-      }
+    if self.inc_nodes.remove(node).is_none() && !self.alloc_nodes.remove(&node) {
+      self.dec_nodes.push(node);
     }
   }
 
   pub fn mut_node<F>(&mut self, node: NodeIndex, func: F)
   where F: FnOnce(&mut NodeT) + 'a {
     if self.inc_nodes.contains(node) {
-      func(&mut self.inc_nodes.get_mut(node).unwrap());
+      func(self.inc_nodes.get_mut(node).unwrap());
     } else {
       self.mut_nodes.push((node, Box::new(func)));
     }
@@ -236,7 +239,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   pub fn update_node<F>(&mut self, node: NodeIndex, func: F)
   where F: FnOnce(NodeT) -> NodeT + 'a {
     if self.inc_nodes.contains(node) {
-      self.inc_nodes.update_with(node, |x| func(x));
+      self.inc_nodes.update_with(node, func);
     } else {
       self.update_nodes.push((node, Box::new(func)));
     }
@@ -276,6 +279,9 @@ impl Context {
       node_dist: Arc::new(IdDistributer::new()),
     }
   }
+}
+impl Default for Context {
+  fn default() -> Self { Self::new() }
 }
 impl Clone for Context {
   fn clone(&self) -> Self {

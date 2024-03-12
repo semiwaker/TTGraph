@@ -5,19 +5,19 @@ use super::*;
 
 impl<T: NodeEnum + Debug> Debug for Graph<T> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "Graph {{\n")?;
-    write!(f, "  ctx_id = {:?}", self.ctx_id)?;
-    write!(f, "  nodes = [\n")?;
+    writeln!(f, "Graph {{")?;
+    writeln!(f, "  ctx_id = {:?}", self.ctx_id)?;
+    writeln!(f, "  nodes = [")?;
     for (i, n) in self.iter_nodes() {
-      write!(f, "    {:?}: {:?}\n", i, n)?;
+      writeln!(f, "    {:?}: {:?}", i, n)?;
     }
-    write!(f, "  ],\n")?;
-    write!(f, "  back_link=[\n")?;
+    writeln!(f, "  ],")?;
+    writeln!(f, "  back_link=[")?;
     for (i, s) in self.back_links.iter() {
-      write!(f, "    {:?}: {:?}\n", i, s)?;
+      writeln!(f, "    {:?}: {:?}", i, s)?;
     }
-    write!(f, "  ]\n")?;
-    write!(f, "}}\n")?;
+    writeln!(f, "  ]")?;
+    writeln!(f, "}}")?;
     Ok(())
   }
 }

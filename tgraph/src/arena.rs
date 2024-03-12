@@ -122,3 +122,7 @@ impl IdDistributer {
     c + 1
   }
 }
+
+impl Default for IdDistributer {
+  fn default() -> Self { IdDistributer { cnt: AtomicUsize::new(0) } }
+}

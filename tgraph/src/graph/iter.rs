@@ -12,6 +12,6 @@ impl<'a: 'b, 'b, EDataT> Iterator for EdgeIterator<'a, 'b, EDataT> {
 
   fn next(&mut self) -> Option<Self::Item> {
     let e = self.iter.next();
-    e.and_then(|idx| Some((*idx, self.edges.get(*idx).unwrap().from)))
+    e.map(|idx| (*idx, self.edges.get(*idx).unwrap().from))
   }
 }

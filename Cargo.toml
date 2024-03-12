@@ -1,5 +1,3 @@
 [workspace]
-members = [
-    "tgraph",
-    "tgraph_macros"
-]
+members = ["tgraph", "tgraph_macros"]
+resolver = "2"

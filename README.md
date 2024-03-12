@@ -222,7 +222,8 @@ struct MyNodeType{
     b: NodeIndex
     // An set of edges with name 'c'
     c: HashSet<NodeIndex>
-    // Currently only NodeIndex or HashSet<NodeIndex> is supported
+    // Currently only NodeIndex, HashSet<NodeIndex>, BTreeSet<NodeIndex> and Vec<NodeIndex> are supported
+    // Nesting is not allowed
 }
 ```
 
@@ -285,10 +286,11 @@ for (idx, node) in NodeTypeA::iter_by_type(&graph) {
 }
 ```
 
-Replace a node. All nodes connecting to the old node in the graph will be modified. For example, if `a.input = b`, after replacing `b` with `c`, we will have `a.input = c`. Replacement happens after update and before remove when commit.
+Redirect all links to a node. All nodes connecting to the old node in the graph will be modified. For example, if `a.input = b`, after redirect `b` to `c`, we will have `a.input = c`. 
+Redirection happens before inserting new nodes, so new nodes in the transaction will not be redicted. Use `redirect_all` if new nodes are required to be redirected as well.
 
 ```rust
-trans.replace_node(old_idx, new_idx);
+trans.redirect_node(old_idx, new_idx);
 ```
 
 ### Performance notifications

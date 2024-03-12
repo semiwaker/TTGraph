@@ -5,11 +5,11 @@ use super::*;
 
 impl<T: NodeEnum + Debug> Display for Graph<T> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "Graph {{\n")?;
+    writeln!(f, "Graph {{")?;
     for (i, n) in self.iter_nodes() {
-      write!(f, "  {}: {:?}\n", i.0, n)?;
+      writeln!(f, "  {}: {:?}", i.0, n)?;
     }
-    write!(f, "}}\n")?;
+    writeln!(f, "}}")?;
     Ok(())
   }
 }

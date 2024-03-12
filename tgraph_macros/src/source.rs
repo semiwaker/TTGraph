@@ -59,7 +59,7 @@ pub fn get_source(input: &ItemStruct) -> Vec<ConnectType> {
       }
     }
   }
-  if result.len() == 0 {
+  if result.is_empty() {
     result.push(ConnectType::Empty);
   }
   result
