@@ -139,7 +139,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
     for (id, new_id) in &id_map {
       for (y, s) in &self.back_links[id] {
-        new_nodes.get_mut(*y).unwrap().modify(*s, *id, *new_id);
+        new_nodes.get_mut(id_map[&y]).unwrap().modify(*s, *id, *new_id);
       }
     }
 
