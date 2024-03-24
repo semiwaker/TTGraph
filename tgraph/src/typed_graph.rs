@@ -127,6 +127,32 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
+  /// Switch the context and relabel the node ids. Useful when there are a lot of removed NodeIndex, and after context switching it will be more concise.
+  /// Warning: please ensure there is no uncommitted transactions!
+  pub fn switch_context(self, new_ctx: &Context) -> Self {
+    let mut new_nodes = Arena::new(Arc::clone(&new_ctx.node_dist));
+    let mut id_map = BTreeMap::new();
+
+    for (id, x) in self.nodes {
+      id_map.insert(id, new_nodes.insert(x));
+    }
+
+    for (id, new_id) in &id_map {
+      for (y, s) in &self.back_links[id] {
+        new_nodes.get_mut(*y).unwrap().modify(*s, *id, *new_id);
+      }
+    }
+
+    let mut result = Graph {
+      ctx_id: new_ctx.id,
+      nodes: Arena::new(Arc::clone(&new_ctx.node_dist)),
+      back_links: BTreeMap::new(),
+    };
+
+    result.merge_nodes(new_nodes);
+    result
+  }
+
   fn update_node<F>(&mut self, i: NodeIndex, f: F)
   where F: FnOnce(NodeT) -> NodeT {
     for (y, s) in self.nodes.get(i).unwrap().iter_source() {
@@ -201,45 +227,45 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 }
 
-pub trait ContextSwitch {
-  /// Switch the context and relabel the node ids. Useful when there are a lot of removed NodeIndex, and after context switching it will be more concise.
-  /// Warning: please ensure there is no uncommitted transactions!!!
-  fn switch_context(&self, new_context: &Context) -> Self;
-}
+// pub trait ContextSwitch {
+//   /// Switch the context and relabel the node ids. Useful when there are a lot of removed NodeIndex, and after context switching it will be more concise.
+//   /// Warning: please ensure there is no uncommitted transactions!!!
+//   fn switch_context(&self, new_context: &Context) -> Self;
+// }
 
-impl<T: NodeEnum + Clone> ContextSwitch for Graph<T> {
-  fn switch_context(&self, new_context: &Context) -> Self {
-    let mut new_nodes = Arena::new(Arc::clone(&new_context.node_dist));
-    let mut id_map = BTreeMap::new();
-    let mut node_map = BTreeMap::new();
-    let mut new_backlink = BTreeMap::new();
+// impl<T: NodeEnum + Clone> ContextSwitch for Graph<T> {
+//   fn switch_context(&self, new_context: &Context) -> Self {
+//     let mut new_nodes = Arena::new(Arc::clone(&new_context.node_dist));
+//     let mut id_map = BTreeMap::new();
+//     let mut node_map = BTreeMap::new();
+//     let mut new_backlink = BTreeMap::new();
 
-    for (id, x) in &self.nodes {
-      id_map.insert(*id, new_nodes.alloc());
-      node_map.insert(*id, x.clone());
-    }
+//     for (id, x) in &self.nodes {
+//       id_map.insert(*id, new_nodes.alloc());
+//       node_map.insert(*id, x.clone());
+//     }
 
-    for (id, _) in &self.nodes {
-      let new_id = id_map[id];
-      let mut backlink = BTreeSet::new();
-      for (y, s) in &self.back_links[id] {
-        node_map.get_mut(y).unwrap().modify(*s, *id, new_id);
-        backlink.insert((id_map[y], *s));
-      }
-      new_backlink.insert(new_id, backlink);
-    }
+//     for (id, _) in &self.nodes {
+//       let new_id = id_map[id];
+//       let mut backlink = BTreeSet::new();
+//       for (y, s) in &self.back_links[id] {
+//         node_map.get_mut(y).unwrap().modify(*s, *id, new_id);
+//         backlink.insert((id_map[y], *s));
+//       }
+//       new_backlink.insert(new_id, backlink);
+//     }
 
-    for (id, x) in node_map {
-      new_nodes.fill_back(id, x);
-    }
+//     for (id, x) in node_map {
+//       new_nodes.fill_back(id, x);
+//     }
 
-    Graph {
-      ctx_id: new_context.id,
-      nodes: new_nodes,
-      back_links: new_backlink,
-    }
-  }
-}
+//     Graph {
+//       ctx_id: new_context.id,
+//       nodes: new_nodes,
+//       back_links: new_backlink,
+//     }
+//   }
+// }
 
 impl<T: NodeEnum> IntoIterator for Graph<T> {
   type IntoIter = IntoIter<NodeIndex, T>;
@@ -428,12 +454,12 @@ pub trait TypedNode: Sized {
 /// struct A{
 ///   a: NodeIndex,
 /// }
-/// 
+///
 /// #[derive(TypedNode)]
 /// struct B{
 ///   b: NodeIndex,
 /// }
-/// 
+///
 /// #[derive(NodeEnum)]
 /// struct Node{
 ///   NodeTypeA(A),
