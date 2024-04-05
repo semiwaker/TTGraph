@@ -2,6 +2,7 @@
 //! A container for a graph-like data structure, where nodes have distinct types.
 //! An edge in this graph is a data field in the node.
 
+use std::any::Any;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -14,6 +15,8 @@ use crate::arena::*;
 pub mod debug;
 pub mod display;
 pub mod library;
+pub mod macro_traits;
+pub use macro_traits::*;
 
 /// The index of a node
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -85,45 +88,21 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       return;
     }
 
-    self.redirect_node_vec(t.redirect_nodes);
-    self.merge_nodes(t.inc_nodes);
+    let redirect_bds = self.redirect_node_vec(t.redirect_nodes);
+    let merge_bds = self.merge_nodes(t.inc_nodes);
+    self.apply_bidirectional_side_effect(redirect_bds);
+    self.add_bd_link_of_merge(merge_bds);
+
     for (i, f) in t.mut_nodes {
       self.modify_node(i, f)
     }
     for (i, f) in t.update_nodes {
       self.update_node(i, f)
     }
-    self.redirect_node_vec(t.redirect_all_nodes);
+    let redirect_bds = self.redirect_node_vec(t.redirect_all_nodes);
+    self.apply_bidirectional_side_effect(redirect_bds);
     for n in &t.dec_nodes {
       self.remove_node(*n);
-    }
-  }
-
-  fn merge_nodes(&mut self, nodes: Arena<NodeT, NodeIndex>) {
-    for (x, n) in &nodes {
-      self.add_back_link(*x, n);
-    }
-    self.nodes.merge(nodes);
-  }
-
-  fn remove_node(&mut self, idx: NodeIndex) {
-    let n = self.nodes.remove(idx).unwrap();
-    self.remove_back_link(idx, &n);
-    for (y, s) in self.back_links.remove(&idx).unwrap() {
-      self.nodes.get_mut(y).unwrap().modify(s, idx, NodeIndex::empty());
-    }
-  }
-
-  fn modify_node<F>(&mut self, i: NodeIndex, f: F)
-  where F: FnOnce(&mut NodeT) {
-    for (y, s) in self.nodes.get(i).unwrap().iter_source() {
-      self.back_links.get_mut(&y).unwrap().remove(&(i, s));
-    }
-
-    f(self.nodes.get_mut(i).unwrap());
-
-    for (y, s) in self.nodes.get(i).unwrap().iter_source() {
-      self.back_links.get_mut(&y).unwrap().insert((i, s));
     }
   }
 
@@ -139,7 +118,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
     for (id, new_id) in &id_map {
       for (y, s) in &self.back_links[id] {
-        new_nodes.get_mut(id_map[&y]).unwrap().modify(*s, *id, *new_id);
+        new_nodes.get_mut(id_map[&y]).unwrap().modify_link(*s, *id, *new_id);
       }
     }
 
@@ -149,35 +128,145 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       back_links: BTreeMap::new(),
     };
 
-    result.merge_nodes(new_nodes);
+    let merge_bds = result.merge_nodes(new_nodes);
+    result.add_bd_link_of_merge(merge_bds);
     result
   }
 
-  fn update_node<F>(&mut self, i: NodeIndex, f: F)
-  where F: FnOnce(NodeT) -> NodeT {
-    for (y, s) in self.nodes.get(i).unwrap().iter_source() {
-      self.back_links.get_mut(&y).unwrap().remove(&(i, s));
+  /// Check if the backlinks are connected correctly, just for debug
+  #[doc(hidden)]
+  pub fn check_backlinks(&self) {
+    let mut back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>> =
+      BTreeMap::new();
+    for (x, n) in &self.nodes {
+      back_links.entry(*x).or_default();
+      for (y, s) in n.iter_source() {
+        back_links.entry(y).or_default().insert((*x, s));
+        let links =
+          self.back_links.get(&y).expect(&format!("Node {} have no backlink!", x.0));
+        assert!(links.contains(&(*x, s)));
+      }
     }
+    assert_eq!(back_links, self.back_links);
+  }
 
-    self.nodes.update_with(i, f);
+  fn merge_nodes(
+    &mut self, nodes: Arena<NodeT, NodeIndex>,
+  ) -> Vec<(NodeIndex, BidirectionalLinks<NodeT::LinkMirrorEnum>)> {
+    let mut bds = Vec::new();
+    for (x, n) in &nodes {
+      self.add_back_links(*x, n);
+    }
+    for (id, node) in &nodes {
+      bds.push((*id, node.get_bidiretional_links()));
+    }
+    self.nodes.merge(nodes);
 
-    for (y, s) in self.nodes.get(i).unwrap().iter_source() {
-      self.back_links.get_mut(&y).unwrap().insert((i, s));
+    bds
+  }
+
+  // Insert the opposite side of the bidiretional links caused by merge_node
+  fn add_bd_link_of_merge(
+    &mut self, bds: Vec<(NodeIndex, BidirectionalLinks<NodeT::LinkMirrorEnum>)>,
+  ) {
+    for (x, x_bds) in bds {
+      for (ys, lms) in x_bds {
+        for y in ys {
+          for link in &lms {
+            if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
+              self.add_back_link(y, x, NodeT::to_source_enum(link));
+            }
+          }
+        }
+      }
     }
   }
 
-  fn redirect_node(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
+  fn remove_node(&mut self, x: NodeIndex) {
+    let n = self.nodes.remove(x).unwrap();
+    self.remove_bidirectional_link(x);
+    self.remove_back_links(x, &n);
+    for (y, s) in self.back_links.remove(&x).unwrap() {
+      self.nodes.get_mut(y).unwrap().modify_link(s, x, NodeIndex::empty());
+    }
+  }
+
+  fn modify_node<F>(&mut self, x: NodeIndex, f: F)
+  where F: FnOnce(&mut NodeT) {
+    self.remove_bidirectional_link(x);
+    for (y, s) in self.nodes.get(x).unwrap().iter_source() {
+      self.back_links.get_mut(&y).unwrap().remove(&(x, s));
+    }
+
+    f(self.nodes.get_mut(x).unwrap());
+
+    self.add_bidirectional_link(x);
+    for (y, s) in self.nodes.get(x).unwrap().iter_source() {
+      self.back_links.get_mut(&y).unwrap().insert((x, s));
+    }
+  }
+
+  fn update_node<F>(&mut self, x: NodeIndex, f: F)
+  where F: FnOnce(NodeT) -> NodeT {
+    self.remove_bidirectional_link(x);
+    for (y, s) in self.nodes.get(x).unwrap().iter_source() {
+      self.back_links.get_mut(&y).unwrap().remove(&(x, s));
+    }
+
+    self.nodes.update_with(x, f);
+
+    self.add_bidirectional_link(x);
+    for (y, s) in self.nodes.get(x).unwrap().iter_source() {
+      self.back_links.get_mut(&y).unwrap().insert((x, s));
+    }
+  }
+
+  fn add_bidirectional_link(&mut self, x: NodeIndex) {
+    let to_add = self.nodes.get(x).unwrap().get_bidiretional_links();
+    for (ys, bds) in to_add {
+      for y in ys {
+        for link in &bds {
+          if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
+            self.add_back_link(y, x, NodeT::to_source_enum(link));
+          }
+        }
+      }
+    }
+  }
+
+  fn remove_bidirectional_link(&mut self, x: NodeIndex) {
+    let to_remove = self.nodes.get(x).unwrap().get_bidiretional_links();
+    for (ys, bds) in to_remove {
+      for y in ys {
+        for link in &bds {
+          if self.nodes.get_mut(y).unwrap().remove_link(*link, x) {
+            self.remove_back_link(y, x, NodeT::to_source_enum(link));
+          }
+        }
+      }
+    }
+  }
+
+  fn redirect_node(
+    &mut self, old_node: NodeIndex, new_node: NodeIndex,
+  ) -> Vec<(NodeIndex, BidirectionalSideEffect<NodeT::LinkMirrorEnum>)> {
+    let mut result = Vec::new();
     let old_link = self.back_links.remove(&old_node).unwrap();
     self.back_links.insert(old_node, BTreeSet::new());
 
     let new_link = self.back_links.entry(new_node).or_default();
     for (y, s) in old_link {
       new_link.insert((y, s));
-      self.nodes.get_mut(y).unwrap().modify(s, old_node, new_node);
+      let bd = self.nodes.get_mut(y).unwrap().modify_link(s, old_node, new_node);
+      result.push((y, bd));
     }
+    result
   }
 
-  fn redirect_node_vec(&mut self, replacements: Vec<(NodeIndex, NodeIndex)>) {
+  fn redirect_node_vec(
+    &mut self, replacements: Vec<(NodeIndex, NodeIndex)>,
+  ) -> Vec<(NodeIndex, BidirectionalSideEffect<NodeT::LinkMirrorEnum>)> {
+    let mut result = Vec::new();
     let mut fa = BTreeMap::new();
 
     for (old, new) in &replacements {
@@ -202,7 +291,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         y = fa[&y];
       }
 
-      self.redirect_node(*old, x);
+      result.extend(self.redirect_node(*old, x));
 
       x = *new;
       while fa[&x] != y {
@@ -211,61 +300,49 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         x = z;
       }
     }
+    result
   }
 
-  fn add_back_link(&mut self, x: NodeIndex, n: &NodeT) {
+  fn apply_bidirectional_side_effect(
+    &mut self, bds: Vec<(NodeIndex, BidirectionalSideEffect<NodeT::LinkMirrorEnum>)>,
+  ) {
+    for (x, x_bd) in &bds {
+      for link in &x_bd.link_mirrors {
+        if self.nodes.get_mut(x_bd.remove).unwrap().remove_link(*link, *x) {
+          self.remove_back_link(x_bd.remove, *x, NodeT::to_source_enum(link));
+        }
+      }
+    }
+    for (x, x_bd) in &bds {
+      for link in &x_bd.link_mirrors {
+        if self.nodes.get_mut(x_bd.add).unwrap().add_link(*link, *x) {
+          self.add_back_link(x_bd.add, *x, NodeT::to_source_enum(link));
+        }
+      }
+    }
+  }
+
+  fn add_back_link(&mut self, x: NodeIndex, y: NodeIndex, src: NodeT::SourceEnum) {
+    self.back_links.entry(y).or_default().insert((x, src));
+  }
+
+  fn add_back_links(&mut self, x: NodeIndex, n: &NodeT) {
     self.back_links.entry(x).or_default();
     for (y, s) in n.iter_source() {
       self.back_links.entry(y).or_default().insert((x, s));
     }
   }
 
-  fn remove_back_link(&mut self, x: NodeIndex, n: &NodeT) {
+  fn remove_back_link(&mut self, x: NodeIndex, y: NodeIndex, src: NodeT::SourceEnum) {
+    self.back_links.get_mut(&y).unwrap().remove(&(x, src));
+  }
+
+  fn remove_back_links(&mut self, x: NodeIndex, n: &NodeT) {
     for (y, s) in n.iter_source() {
       self.back_links.get_mut(&y).unwrap().remove(&(x, s));
     }
   }
 }
-
-// pub trait ContextSwitch {
-//   /// Switch the context and relabel the node ids. Useful when there are a lot of removed NodeIndex, and after context switching it will be more concise.
-//   /// Warning: please ensure there is no uncommitted transactions!!!
-//   fn switch_context(&self, new_context: &Context) -> Self;
-// }
-
-// impl<T: NodeEnum + Clone> ContextSwitch for Graph<T> {
-//   fn switch_context(&self, new_context: &Context) -> Self {
-//     let mut new_nodes = Arena::new(Arc::clone(&new_context.node_dist));
-//     let mut id_map = BTreeMap::new();
-//     let mut node_map = BTreeMap::new();
-//     let mut new_backlink = BTreeMap::new();
-
-//     for (id, x) in &self.nodes {
-//       id_map.insert(*id, new_nodes.alloc());
-//       node_map.insert(*id, x.clone());
-//     }
-
-//     for (id, _) in &self.nodes {
-//       let new_id = id_map[id];
-//       let mut backlink = BTreeSet::new();
-//       for (y, s) in &self.back_links[id] {
-//         node_map.get_mut(y).unwrap().modify(*s, *id, new_id);
-//         backlink.insert((id_map[y], *s));
-//       }
-//       new_backlink.insert(new_id, backlink);
-//     }
-
-//     for (id, x) in node_map {
-//       new_nodes.fill_back(id, x);
-//     }
-
-//     Graph {
-//       ctx_id: new_context.id,
-//       nodes: new_nodes,
-//       back_links: new_backlink,
-//     }
-//   }
-// }
 
 impl<T: NodeEnum> IntoIterator for Graph<T> {
   type IntoIter = IntoIter<NodeIndex, T>;
@@ -372,15 +449,11 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Merge a graph and all its nodes
-  /// The merged graph can have a different context than the one this transaction used
+  /// The merged graph and this transaction should have then same context
   pub fn merge_graph(&mut self, graph: Graph<NodeT>) {
-    let graph_ctx_id = graph.ctx_id;
+    assert!(self.ctx_id == graph.ctx_id);
     for (i, n) in graph.into_iter() {
-      if self.ctx_id != graph_ctx_id {
-        self.new_node(n);
-      } else {
-        self.fill_back_node(i, n);
-      }
+      self.fill_back_node(i, n);
     }
   }
 
@@ -420,63 +493,4 @@ pub trait SourceIterator<T: TypedNode>:
 {
   type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   fn new(node: &T) -> Self;
-}
-
-/// A helper trait for the graph to trace all links in the nodes
-/// # Example
-/// ```rust
-/// use tgraph::typed_graph::*;
-/// use tgraph_macros::*;
-/// #[derive(TypedNode)]
-/// struct SomeNode {
-///   a_link: NodeIndex,
-///   another_link: NodeIndex,
-///   vec_link: Vec<NodeIndex>,
-///   set_link: HashSet<NodeIndex>,
-///   bset_link: BTreeSet<NodeIndex>,
-///   other_data: usize
-///   // ...
-/// }
-/// ```
-pub trait TypedNode: Sized {
-  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
-  type Iter: SourceIterator<Self, Source = Self::Source>;
-  fn iter_source(&self) -> Self::Iter;
-  fn modify(&mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex);
-}
-
-/// A helper trait to declare a enum of all typed nodes
-/// # Example
-/// ```rust
-/// use tgraph::typed_graph::*;
-/// use tgraph_macros::*;
-/// #[derive(TypedNode)]
-/// struct A{
-///   a: NodeIndex,
-/// }
-///
-/// #[derive(TypedNode)]
-/// struct B{
-///   b: NodeIndex,
-/// }
-///
-/// #[derive(NodeEnum)]
-/// struct Node{
-///   NodeTypeA(A),
-///   AnotherNodeType(B),
-/// }
-/// ```
-pub trait NodeEnum {
-  type SourceEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
-  fn iter_source(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
-  fn modify(&mut self, source: Self::SourceEnum, old_idx: NodeIndex, new_idx: NodeIndex);
-}
-
-pub trait IndexEnum {
-  fn modify(&mut self, new_idx: NodeIndex);
-  fn index(&self) -> NodeIndex;
-}
-
-pub struct NIEWrap<T: IndexEnum> {
-  pub value: T,
 }

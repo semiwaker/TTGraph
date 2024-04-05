@@ -9,7 +9,7 @@ extern crate self as tgraph;
 
 #[derive(TypedNode)]
 #[StructFields(pub)]
-pub struct Edge<T> {
+pub struct Edge<T: Any> {
   data: T,
   from: NodeIndex,
   to: NodeIndex,
@@ -17,7 +17,7 @@ pub struct Edge<T> {
 
 #[derive(TypedNode)]
 #[StructFields(pub)]
-pub struct Region<T> {
+pub struct Region<T: Any> {
   data: T,
   nodes: BTreeSet<NodeIndex>,
 }

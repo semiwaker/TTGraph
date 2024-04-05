@@ -12,6 +12,7 @@ syn = { version = "2.0", features = [
     "extra-traits",
     "visit",
     "visit-mut",
+    "parsing",
 ] }
 paste = "1.0"
 synstructure = "0.13"
