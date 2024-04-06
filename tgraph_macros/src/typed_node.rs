@@ -5,7 +5,7 @@ use syn::{parse_quote, Fields, Generics, Ident, ItemStruct, Type, TypePath, Visi
 use crate::utils::*;
 
 #[derive(Debug)]
-pub enum LinkType {
+pub(crate) enum LinkType {
   Direct(Ident, Ident),
   HSet(Ident, Ident),
   BSet(Ident, Ident),
@@ -311,29 +311,25 @@ pub(crate) fn make_typed_node(
       LinkType::Direct(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
           if self.#ident.is_empty() {
-            panic!("Remove link on an empty point link!");
+            false
           } else {
-            self.#ident = tgraph::typed_graph::NodeIndex::empty();
-            true
+            if self.#ident == target {
+              self.#ident = tgraph::typed_graph::NodeIndex::empty();
+              true
+            } else {
+              false
+            }
           }
         }
       },
       LinkType::HSet(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
-          if !self.#ident.remove(&target) {
-            panic!("Remove an non-existing link!");
-          } else {
-            true
-          }
+          self.#ident.remove(&target)
         }
       },
       LinkType::BSet(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
-          if !self.#ident.remove(&target) {
-            panic!("Remove an non-existing link!");
-          } else {
-            true
-          }
+          self.#ident.remove(&target)
         }
       },
       LinkType::Vec(_, camel) => quote!{

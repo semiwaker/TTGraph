@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 // use proc_macro2;
 use proc_macro_error::*;
-use quote::{format_ident, quote, ToTokens};
+use quote::ToTokens;
 use syn::{parse_macro_input, Fields, Item, ItemStruct};
 
 mod node_enum;
@@ -46,17 +46,12 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
 
   let mut result = proc_macro2::TokenStream::new();
   the_enum.to_tokens(&mut result);
-  let trait_ident = format_ident!("TGGenTrait{}", enumt);
-  quote! {
-        #vis trait #trait_ident<'a, IterT> {
-            fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<#enumt>) -> IterT;
-            fn get_by_type<'b>(graph: &'b tgraph::typed_graph::Graph<#enumt>, idx: tgraph::typed_graph::NodeIndex) -> Option<&'b Self>;
-        }
-    }
-    .to_tokens(&mut result);
 
-  for (ident, ty) in &vars {
-    make_gentrait_impl(&mut result, &enumt, ident, ty, &trait_ident, &vis);
+  if check_type_distinct(&vars) {
+    for (ident, ty) in &vars {
+      make_query_by_type_trait_impl(&mut result, &enumt, ident, ty, &vis);
+      make_transaction_by_type_trait_impl(&mut result, &enumt, ident, ty);
+    }
   }
   let source_enum_name = make_source_enum(&mut result, &vars, &enumt, &vis);
   let link_mirror_enum_name = make_link_mirror_enum(&mut result, &vars, &enumt, &vis);
@@ -67,8 +62,8 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   for item in macro_input.items.iter().skip(1) {
     if let Item::Macro(the_macro) = item {
       if the_macro.mac.path.is_ident("bidirectional") {
-        if let syn::Result::Err(_) =
-          get_bidiretional(the_macro.mac.tokens.clone(), &mut bidirectional_links)
+        if get_bidiretional(the_macro.mac.tokens.clone(), &mut bidirectional_links)
+          .is_err()
         {
           abort!(the_macro, "Parse failed")
         }

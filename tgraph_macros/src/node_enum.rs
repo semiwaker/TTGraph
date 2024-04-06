@@ -1,23 +1,37 @@
+use std::collections::HashSet;
+
 use proc_macro2::{self, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::{Ident, Type, Visibility};
 
 use crate::bidirectional::*;
 
-pub fn make_gentrait_impl(
-  result: &mut TokenStream, enumt: &Ident, ident: &Ident, ty: &Type, trait_ident: &Ident,
+pub(crate) fn check_type_distinct(vars: &Vec<(Ident, Type)>) -> bool{
+  let mut s = HashSet::new();
+  for (_, ty) in vars{
+    if s.contains(ty) {
+      return false;
+    }
+    s.insert(ty.clone());
+  }
+  true
+}
+
+pub(crate) fn make_query_by_type_trait_impl(
+  result: &mut TokenStream, enumt: &Ident, ident: &Ident, ty: &Type,
   vis: &Visibility,
 ) {
   let iter_ident = format_ident!("TGGenIter{}", ident);
 
   quote! {
-    impl<'a> #trait_ident<'a, #iter_ident<'a>> for #ty{
-      fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<#enumt>) -> #iter_ident<'a>{
+    impl<'a> tgraph::typed_graph::QueryByType<'a> for #ty{
+      type NodeEnumT = #enumt;
+      fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<Self::NodeEnumT>) -> impl std::iter::Iterator<Item = (NodeIndex, &Self)>{
         #iter_ident{
           it: graph.iter_nodes(),
         }
       }
-      fn get_by_type<'b>(graph: &'b tgraph::typed_graph::Graph<#enumt>, idx: tgraph::typed_graph::NodeIndex) -> Option<&#ty>{
+      fn get_by_type(graph: &'a tgraph::typed_graph::Graph<Self::NodeEnumT>, idx: tgraph::typed_graph::NodeIndex) -> Option<&#ty>{
         graph.get_node(idx).and_then(|x| if let #enumt::#ident(y) = x { Some(y) } else { None })
       }
     }
@@ -41,7 +55,45 @@ pub fn make_gentrait_impl(
   }.to_tokens(result);
 }
 
-pub fn make_source_enum(
+pub(crate) fn make_transaction_by_type_trait_impl(
+  result: &mut TokenStream, enumt: &Ident, ident: &Ident, ty: &Type,
+) {
+
+  quote! {
+    impl tgraph::typed_graph::TransactionByType for #ty{
+      type NodeEnumT = #enumt;
+      fn new_by_type(
+        trans: &mut Transaction<Self::NodeEnumT>, node: Self,
+      ) -> NodeIndex {
+        trans.new_node(Self::NodeEnumT::#ident(node))
+      }
+      fn mut_by_type<'a, FuncT>(
+        trans: &mut tgraph::typed_graph::Transaction<'a, Self::NodeEnumT>, idx: tgraph::typed_graph::NodeIndex, func: FuncT,
+      ) where FuncT: FnOnce(&mut Self) + 'a {
+        trans.mut_node(idx, |x|{
+          if let #enumt::#ident(y) = x {
+            func(y);
+          } else {
+            panic!("Type does not match!");
+          }
+        });
+      }
+      fn update_by_type<'a, FuncT>(
+        trans: &mut tgraph::typed_graph::Transaction<'a, Self::NodeEnumT>, idx: tgraph::typed_graph::NodeIndex, func: FuncT,
+      ) where FuncT: FnOnce(Self) -> Self + 'a {
+        trans.update_node(idx, |x|{
+          if let #enumt::#ident(y) = x {
+            #enumt::#ident(func(y))
+          } else {
+            panic!("Type does not match!");
+          }
+        });
+      }
+    }
+  }.to_tokens(result);
+}
+
+pub(crate) fn make_source_enum(
   result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
 ) -> Ident {
   let source_enum_name = format_ident!("{}SourceEnum", enumt);
@@ -62,7 +114,7 @@ pub fn make_source_enum(
   source_enum_name
 }
 
-pub fn make_link_mirror_enum(
+pub(crate) fn make_link_mirror_enum(
   result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
 ) -> Ident {
   let link_mirror_enum_name = format_ident!("{}LinkMirrorEnum", enumt);
@@ -82,7 +134,7 @@ pub fn make_link_mirror_enum(
   link_mirror_enum_name
 }
 
-pub fn make_node_type_mirror_enum(
+pub(crate) fn make_node_type_mirror_enum(
   result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
 ) -> Ident {
   let enum_name = format_ident!("{}NodeTypeMirror", enumt);
@@ -102,7 +154,7 @@ pub fn make_node_type_mirror_enum(
   enum_name
 }
 
-pub fn make_node_enum(
+pub(crate) fn make_node_enum(
   result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident,
   source_enum_name: &Ident, link_mirror_enum_name: &Ident, node_type_mirror_name: &Ident,
   bidirectional_links: &Vec<BidirectionalLink>,
@@ -171,6 +223,19 @@ pub fn make_node_enum(
     })
   }
 
+  let mut check_link_arms = Vec::new();
+  for (ident, _) in vars {
+    check_link_arms.push(quote! {
+      Self::#ident(x) => {
+        if let Self::LinkMirrorEnum::#ident(src) = link {
+          true
+        } else {
+          false
+        }
+      },
+    })
+  }
+
   let mut data_ref_arms = Vec::new();
   for (ident, ty) in vars {
     data_ref_arms.push(quote! {
@@ -219,6 +284,11 @@ pub fn make_node_enum(
       fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: tgraph::typed_graph::NodeIndex) -> bool {
         match self{
           #(#remove_link_arms)*
+        }
+      }
+      fn check_link(&self, link: Self::LinkMirrorEnum) -> bool {
+        match self{
+          #(#check_link_arms)*
         }
       }
       fn data_ref_by_name<T: std::any::Any>(&self, name: &'static str) -> Option<&T> {

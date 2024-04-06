@@ -56,7 +56,7 @@ pub(crate) fn get_bidiretional(
   tokens: TokenStream, links: &mut Vec<BidirectionalLink>,
 ) -> syn::Result<()> {
   let link_vec: BidirectionalLinkVec = parse2(tokens)?;
-  links.extend(link_vec.links.into_iter());
+  links.extend(link_vec.links);
   Ok(())
 }
 
@@ -118,7 +118,7 @@ pub(crate) fn make_bidirectional_link(
   for (var, ty) in vars {
     if let btree_map::Entry::Occupied(v) = b_links.entry(var.clone()) {
       let mut vecs = Vec::new();
-      for (link, _) in v.get() {
+      for link in v.get().keys() {
         let camel = upper_camel(link);
         vecs.push(quote!{
             (

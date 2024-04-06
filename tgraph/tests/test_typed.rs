@@ -89,10 +89,12 @@ mod tests_typed {
       NodeB::get_by_type(&graph, b).unwrap().data_ref_by_name::<usize>("data1")
     );
     println!("{:?}", graph.get_node(b).unwrap().data_ref_by_name::<usize>("data1"));
-    // for (idx, n) in NodeA::iter_by_type(&graph) {}
-    // for (idx, n) in NodeB::iter_by_type(&graph) {
-    // let b = NodeB::get_by_type(&graph, idx);
-    // }
+    for (idx, n) in NodeA::iter_by_type(&graph) {
+      println!("{:?}: {:?}", idx, n);
+    }
+    for (idx, n) in NodeB::iter_by_type(&graph) {
+      println!("{:?}: {:?}", idx, n);
+    }
     // for (idx, n) in Edge::iter_by_type(&graph) {}
   }
 

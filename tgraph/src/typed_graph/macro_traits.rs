@@ -94,6 +94,8 @@ pub trait NodeEnum {
   fn add_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
   /// Remove a link, designed for bidirectional links
   fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
+  /// Check if the link and the node is of the same type
+  fn check_link(&self, link: Self::LinkMirrorEnum) -> bool;
 
   /// Try to get the reference of a data by name
   fn data_ref_by_name<T: Any>(&self, name: &'static str) -> Option<&T>;
@@ -117,6 +119,38 @@ pub trait NodeEnum {
 }
 
 pub type BidirectionalLinks<LinkMirrorT> = Vec<(Vec<NodeIndex>, Vec<LinkMirrorT>)>;
+
+/// Auto implemented trait for TypedNode to query the graph
+/// Only works if all node types are distinct!
+pub trait QueryByType<'a>
+where Self: 'a
+{
+  type NodeEnumT: NodeEnum;
+  /// Iterate all nodes of this type in the graph
+  fn iter_by_type(
+    graph: &'a Graph<Self::NodeEnumT>,
+  ) -> impl Iterator<Item = (NodeIndex, &Self)>;
+  /// Get a node from the graph, assume it is of this type
+  fn get_by_type(graph: &'a Graph<Self::NodeEnumT>, idx: NodeIndex) -> Option<&Self>;
+}
+
+/// Auto implemented trait for TypedNode to do transaction
+/// Only works if all node types are distinct!
+pub trait TransactionByType
+where Self: Sized
+{
+  type NodeEnumT: NodeEnum;
+  /// Insert a new node, infer the variant by type
+  fn new_by_type(trans: &mut Transaction<Self::NodeEnumT>, node: Self) -> NodeIndex;
+  /// Use a `fn(&mut Self)` to modify the node, panic if type does not match!
+  fn mut_by_type<'a, FuncT>(
+    trans: &mut Transaction<'a, Self::NodeEnumT>, idx: NodeIndex, func: FuncT,
+  ) where FuncT: FnOnce(&mut Self) + 'a;
+  /// Use a `fn(Self) -> Self` to update the node, panic if type does not match!
+  fn update_by_type<'a, FuncT>(
+    trans: &mut Transaction<'a, Self::NodeEnumT>, idx: NodeIndex, func: FuncT,
+  ) where FuncT: FnOnce(Self) -> Self + 'a;
+}
 
 #[StructFields(pub)]
 #[derive(Clone, Debug)]
