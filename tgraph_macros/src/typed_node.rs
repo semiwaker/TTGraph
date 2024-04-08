@@ -232,27 +232,41 @@ pub(crate) fn make_typed_node(
   for s in sources {
     modify_arms.push(match s {
       LinkType::Direct(ident, camel) => quote! {
-        Self::Source::#camel => self.#ident = new_idx,
+        Self::Source::#camel => {
+          let replaced = self.#ident != new_idx;
+          let removed = replaced && !self.#ident.is_empty();
+          self.#ident = new_idx;
+          (removed, replaced && !new_idx.is_empty())
+        },
       },
       LinkType::HSet(ident, camel) => quote! {
         Self::Source::#camel => {
-          self.#ident.remove(&old_idx);
-          if !new_idx.is_empty() {
-            self.#ident.insert(new_idx);
-          }
+          let removed = self.#ident.remove(&old_idx);
+          let added = if !new_idx.is_empty() {
+            self.#ident.insert(new_idx)
+          } else {
+            false
+          };
+          (removed, added)
         },
       },
       LinkType::BSet(ident, camel) => quote! {
         Self::Source::#camel => {
-          self.#ident.remove(&old_idx);
-          if !new_idx.is_empty() {
-            self.#ident.insert(new_idx);
-          }
+          let removed = self.#ident.remove(&old_idx);
+          let added = if !new_idx.is_empty() {
+            self.#ident.insert(new_idx)
+          } else {
+            false
+          };
+          (removed, added)
         },
       },
       LinkType::Vec(ident, camel) => quote! {
         Self::Source::#camel(idx) => {
+          let replaced = self.#ident[idx] != new_idx;
+          let removed = replaced && !self.#ident[idx].is_empty();
           self.#ident[idx] = new_idx;
+          (removed, replaced && !new_idx.is_empty())
         },
       },
       // LinkType::Enum(ident, camel) => quote! {
@@ -261,7 +275,7 @@ pub(crate) fn make_typed_node(
       //   }
       // },
       LinkType::Empty => quote! {
-        Self::Source::Empty => {}
+        Self::Source::Empty => (false, false),
       },
     })
   }
@@ -283,23 +297,23 @@ pub(crate) fn make_typed_node(
             assert!(self.#ident == target);
             false
           }
-        }
+        },
       },
       LinkType::HSet(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
           self.#ident.insert(target)
-        }
+        },
       },
       LinkType::BSet(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
           self.#ident.insert(target)
-        }
+        },
       },
       LinkType::Vec(_, camel) => quote!{
         Self::LinkMirror::#camel => panic!("Add link on Vec<NodeIndex> is not supported!"),
       },
       LinkType::Empty => quote! {
-        Self::LinkMirror::Empty => {false}
+        Self::LinkMirror::Empty => false,
       },
     })
   }
@@ -320,23 +334,23 @@ pub(crate) fn make_typed_node(
               false
             }
           }
-        }
+        },
       },
       LinkType::HSet(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
           self.#ident.remove(&target)
-        }
+        },
       },
       LinkType::BSet(ident, camel) => quote!{
         Self::LinkMirror::#camel => {
           self.#ident.remove(&target)
-        }
+        },
       },
       LinkType::Vec(_, camel) => quote!{
         Self::LinkMirror::#camel => panic!("Remove link on Vec<NodeIndex> is not supported!"),
       },
       LinkType::Empty => quote! {
-        Self::LinkMirror::Empty => {false}
+        Self::LinkMirror::Empty => false,
       },
     })
   }
@@ -442,7 +456,7 @@ pub(crate) fn make_typed_node(
           #(#iter_link_arms)*
         }
       }
-      fn modify_link(&mut self, source: Self::Source, old_idx:tgraph::typed_graph::NodeIndex, new_idx: tgraph::typed_graph::NodeIndex) {
+      fn modify_link(&mut self, source: Self::Source, old_idx:tgraph::typed_graph::NodeIndex, new_idx: tgraph::typed_graph::NodeIndex) -> (bool, bool) {
         match source{
           #(#modify_arms)*
         }

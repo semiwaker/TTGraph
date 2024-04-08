@@ -186,8 +186,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   // }
 
   fn remove_node(&mut self, x: NodeIndex, bd: &mut BidirectionLinkContainer<NodeT>) {
-    let n = self.nodes.remove(x).unwrap();
     self.remove_bidirectional_link(x, bd);
+    let n = self.nodes.remove(x).expect("Remove a non-existing node!");
     self.remove_back_links(x, &n);
     for (y, s) in self.back_links.remove(&x).unwrap() {
       self.nodes.get_mut(y).unwrap().modify_link(s, x, NodeIndex::empty());
@@ -281,8 +281,12 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     for (y, s) in old_link {
       new_link.insert((y, s));
       let side_effect = self.nodes.get_mut(y).unwrap().modify_link(s, old_node, new_node);
-      bd.add_one(y, side_effect.add, &side_effect.link_mirrors);
-      bd.remove_one(y, side_effect.remove, &side_effect.link_mirrors);
+      if !side_effect.add.is_empty() {
+        bd.add_one(y, side_effect.add, &side_effect.link_mirrors);
+      }
+      if !side_effect.remove.is_empty() {
+        bd.remove_one(y, side_effect.remove, &side_effect.link_mirrors);
+      }
     }
   }
 
@@ -346,13 +350,17 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
   fn apply_bidirectional_links(&mut self, bd: BidirectionLinkContainer<NodeT>) {
     for (x, y, l) in bd.to_remove {
-      if self.nodes.get_mut(y).unwrap().remove_link(l, x) {
-        self.remove_back_link(y, x, NodeT::to_source_enum(&l));
+      if self.nodes.contains(x) && self.nodes.contains(y) {
+        if self.nodes.get_mut(y).unwrap().remove_link(l, x) {
+          self.remove_back_link(y, x, NodeT::to_source_enum(&l));
+        }
       }
     }
     for (x, y, l) in bd.to_add {
-      if self.nodes.get_mut(y).unwrap().add_link(l, x) {
-        self.add_back_link(y, x, NodeT::to_source_enum(&l));
+      if self.nodes.contains(x) && self.nodes.contains(y) {
+        if self.nodes.get_mut(y).unwrap().add_link(l, x) {
+          self.add_back_link(y, x, NodeT::to_source_enum(&l));
+        }
       }
     }
   }

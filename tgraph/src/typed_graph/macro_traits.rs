@@ -28,11 +28,13 @@ pub trait TypedNode: Sized {
   /// Iterate the linked node of the specified link
   fn iter_link(&self, link: Self::LinkMirror)
     -> Box<dyn Iterator<Item = NodeIndex> + '_>;
-  /// Modify a link by source
-  fn modify_link(&mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex);
-  /// Add a link, designed for bidirectional links
+  /// Modify a link by source, return (remove_sucess, add_success)
+  fn modify_link(
+    &mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex,
+  ) -> (bool, bool);
+  /// Add a link, designed for bidirectional links, return true if the link is actually added
   fn add_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
-  /// Remove a link, designed for bidirectional links
+  /// Remove a link, designed for bidirectional links, return true if the link is actually removed
   fn remove_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
 
   /// Get the types of the links

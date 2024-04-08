@@ -184,11 +184,11 @@ pub(crate) fn make_node_enum(
     mod_arms.push(quote! {
       Self::#ident(x) => {
         if let Self::SourceEnum::#ident(src) = source {
-          <#ty as TypedNode>::modify_link(x, src, old_idx, new_idx);
+          let (removed, added) = <#ty as TypedNode>::modify_link(x, src, old_idx, new_idx);
           tgraph::typed_graph::BidirectionalSideEffect {
             link_mirrors: self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#ident(src.to_link_mirror())),
-            add: new_idx,
-            remove: old_idx,
+            add: if (added) {new_idx} else {tgraph::typed_graph::NodeIndex::empty()},
+            remove: if (removed) {old_idx} else {tgraph::typed_graph::NodeIndex::empty()},
           }
         } else {
           panic!("Unmatched node type and source type!")
