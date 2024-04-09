@@ -43,6 +43,12 @@ pub trait TypedNode: Sized {
   fn link_mirrors() -> &'static [Self::LinkMirror];
   /// Get the name of the links
   fn link_names() -> &'static [&'static str];
+  /// Get the links by name
+  fn get_link_by_name(
+    &self, name: &'static str,
+  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  /// Get the links by group name
+  fn get_link_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
 
   // fn data_types() -> [TypeId];
   /// Get the name of the data
@@ -98,6 +104,12 @@ pub trait NodeEnum {
   fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
   /// Check if the link and the node is of the same type
   fn check_link(&self, link: Self::LinkMirrorEnum) -> bool;
+  /// Get the links by name
+  fn get_link_by_name(
+    &self, name: &'static str,
+  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  /// Get the links by group name
+  fn get_link_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
 
   /// Try to get the reference of a data by name
   fn data_ref_by_name<T: Any>(&self, name: &'static str) -> Option<&T>;

@@ -17,6 +17,7 @@ pub mod display;
 pub mod library;
 pub mod macro_traits;
 pub use macro_traits::*;
+pub use tgraph_macros::*;
 
 /// The index of a node
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -168,23 +169,6 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     self.nodes.merge(nodes);
   }
 
-  // // Insert the opposite side of the bidiretional links caused by merge_node
-  // fn add_bd_link_of_merge(
-  //   &mut self, bds: Vec<(NodeIndex, BidirectionalLinks<NodeT::LinkMirrorEnum>)>,
-  // ) {
-  //   for (x, x_bds) in bds {
-  //     for (ys, lms) in x_bds {
-  //       for y in ys {
-  //         for link in &lms {
-  //           if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
-  //             self.add_back_link(y, x, NodeT::to_source_enum(link));
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
   fn remove_node(&mut self, x: NodeIndex, bd: &mut BidirectionLinkContainer<NodeT>) {
     self.remove_bidirectional_link(x, bd);
     let n = self.nodes.remove(x).expect("Remove a non-existing node!");
@@ -244,32 +228,6 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  // fn add_bidirectional_link(&mut self, x: NodeIndex) {
-  //   let to_add = self.nodes.get(x).unwrap().get_bidiretional_links();
-  //   for (ys, bds) in to_add {
-  //     for y in ys {
-  //       for link in &bds {
-  //         if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
-  //           self.add_back_link(y, x, NodeT::to_source_enum(link));
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
-  // fn remove_bidirectional_link(&mut self, x: NodeIndex) {
-  //   let to_remove = self.nodes.get(x).unwrap().get_bidiretional_links();
-  //   for (ys, bds) in to_remove {
-  //     for y in ys {
-  //       for link in &bds {
-  //         if self.nodes.get_mut(y).unwrap().remove_link(*link, x) {
-  //           self.remove_back_link(y, x, NodeT::to_source_enum(link));
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
-
   fn redirect_node(
     &mut self, old_node: NodeIndex, new_node: NodeIndex,
     bd: &mut BidirectionLinkContainer<NodeT>,
@@ -328,25 +286,6 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       }
     }
   }
-
-  // fn apply_bidirectional_side_effect(
-  //   &mut self, bds: Vec<(NodeIndex, BidirectionalSideEffect<NodeT::LinkMirrorEnum>)>,
-  // ) {
-  //   for (x, x_bd) in &bds {
-  //     for link in &x_bd.link_mirrors {
-  //       if self.nodes.get_mut(x_bd.remove).unwrap().remove_link(*link, *x) {
-  //         self.remove_back_link(x_bd.remove, *x, NodeT::to_source_enum(link));
-  //       }
-  //     }
-  //   }
-  //   for (x, x_bd) in &bds {
-  //     for link in &x_bd.link_mirrors {
-  //       if self.nodes.get_mut(x_bd.add).unwrap().add_link(*link, *x) {
-  //         self.add_back_link(x_bd.add, *x, NodeT::to_source_enum(link));
-  //       }
-  //     }
-  //   }
-  // }
 
   fn apply_bidirectional_links(&mut self, bd: BidirectionLinkContainer<NodeT>) {
     for (x, y, l) in bd.to_remove {

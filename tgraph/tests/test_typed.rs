@@ -8,7 +8,6 @@ mod tests_typed {
 
   use tgraph::typed_graph::library::*;
   use tgraph::typed_graph::*;
-  use tgraph_macros::*;
 
   #[derive(TypedNode, Debug)]
   struct NodeA {

@@ -8,7 +8,6 @@ mod test_bidirectional {
   use std::hash::Hash;
 
   use tgraph::typed_graph::*;
-  use tgraph_macros::*;
 
   // Test set to set
   #[derive(TypedNode, Debug, Clone)]
