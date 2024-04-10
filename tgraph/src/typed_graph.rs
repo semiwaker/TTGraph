@@ -14,9 +14,12 @@ use crate::arena::*;
 
 pub mod debug;
 pub mod display;
-pub mod library;
+// pub mod library;
 pub mod macro_traits;
 pub use macro_traits::*;
+
+pub mod macros;
+// pub use macros::*;
 pub use tgraph_macros::*;
 
 /// The index of a node

@@ -6,8 +6,7 @@
 mod tests_typed {
   use std::collections::BTreeSet;
 
-  use tgraph::typed_graph::library::*;
-  use tgraph::typed_graph::*;
+  use tgraph::*;
 
   #[derive(TypedNode, Debug)]
   struct NodeA {
@@ -43,7 +42,7 @@ mod tests_typed {
     let mut trans = Transaction::new(&context);
     let n = trans.new_node(MyNodeEnum::Empty(NodeEmpty { x: 0 }));
     graph.commit(trans);
-    for (idx, n) in NodeEmpty::iter_by_type(&graph) {
+    for (idx, n) in iter_nodes!(graph, MyNodeEnum::Empty) {
       eprintln!("{:?} {:?}", idx, n);
     }
 
@@ -56,45 +55,36 @@ mod tests_typed {
     for (idx, n) in graph.iter_nodes() {
       eprintln!("{:?} {:?}", idx, n);
     }
-    for (idx, n) in NodeA::iter_by_type(&graph) {
+    for (idx, n) in iter_nodes!(graph, MyNodeEnum::A) {
       eprintln!("{:?} {:?}", idx, n);
     }
-    for (idx, n) in NodeB::iter_by_type(&graph) {
+    for (idx, n) in iter_nodes!(graph, MyNodeEnum::B) {
       eprintln!("{:?} {:?}", idx, n);
     }
     println!("{:?}", graph);
     println!("{:?}", NodeB::link_types());
     println!("{:?}", NodeB::link_mirrors());
     println!("{:?}", NodeB::link_names());
-    println!("{:?}", Region::<usize>::link_types());
-    println!("{:?}", Region::<usize>::link_mirrors());
-    println!("{:?}", Region::<usize>::link_names());
     println!("{:?}", NodeA::data_names());
     println!("{:?}", NodeB::data_names());
     println!(
       "{:?}",
-      NodeA::get_by_type(&graph, a).unwrap().data_ref_by_name::<String>("name")
+      get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("name")
     );
     println!(
       "{:?}",
-      NodeA::get_by_type(&graph, a).unwrap().data_ref_by_name::<usize>("name")
+      get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<usize>("name")
     );
     println!(
       "{:?}",
-      NodeA::get_by_type(&graph, a).unwrap().data_ref_by_name::<String>("data1")
+      get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("data1")
     );
     println!(
       "{:?}",
-      NodeB::get_by_type(&graph, b).unwrap().data_ref_by_name::<usize>("data1")
+      get_node!(graph, MyNodeEnum::B, b).unwrap().data_ref_by_name::<usize>("data1")
     );
     println!("{:?}", graph.get_node(b).unwrap().data_ref_by_name::<usize>("data1"));
-    for (idx, n) in NodeA::iter_by_type(&graph) {
-      println!("{:?}: {:?}", idx, n);
-    }
-    for (idx, n) in NodeB::iter_by_type(&graph) {
-      println!("{:?}: {:?}", idx, n);
-    }
-    // for (idx, n) in Edge::iter_by_type(&graph) {}
+    // for (idx, n) in Edge::iter_by_type(graph) {}
   }
 
   #[derive(TypedNode, Debug)]

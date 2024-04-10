@@ -6,7 +6,7 @@
 mod test_bidirectional {
   use std::collections::BTreeSet;
 
-  use tgraph::typed_graph::*;
+  use tgraph::*;
 
   #[derive(TypedNode, Debug)]
   struct Node {
