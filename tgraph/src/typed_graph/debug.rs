@@ -6,7 +6,7 @@ use super::*;
 impl<T: NodeEnum + Debug> Debug for Graph<T> {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     writeln!(f, "Graph {{")?;
-    writeln!(f, "  ctx_id = {:?}", self.ctx_id)?;
+    writeln!(f, "  ctx_id = {:?},", self.ctx_id)?;
     writeln!(f, "  nodes = [")?;
     for (i, n) in self.iter_nodes() {
       writeln!(f, "    {:?}: {:?}", i, n)?;

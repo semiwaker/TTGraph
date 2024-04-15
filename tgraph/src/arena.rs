@@ -10,6 +10,8 @@ pub trait ArenaIndex:
   fn new(id: usize) -> Self;
 }
 
+/// The internal conatiner for nodes.
+/// Currently, it is a wrapper over BTreeMap.
 #[derive(Debug, Clone)]
 pub struct Arena<T, IndexT: ArenaIndex> {
   distributer: Arc<IdDistributer>,
