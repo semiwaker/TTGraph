@@ -52,7 +52,7 @@ pub(crate) fn get_bidirectional_links(
 }
 
 pub(crate) fn check_bidirectional_links(
-  vars: &Vec<(Ident, Type)>, links: &Vec<BidirectionalLink>,
+  vars: &[(Ident, Type)], links: &Vec<BidirectionalLink>,
 ) -> Result<(), (Ident, &'static str)> {
   let vars = BTreeSet::from_iter(vars.iter().map(|(ident, _)| ident.clone()));
   for l in links {
@@ -67,7 +67,7 @@ pub(crate) fn check_bidirectional_links(
 }
 
 pub(crate) fn make_bidirectional_link(
-  vars: &Vec<(Ident, Type)>, links: &Vec<BidirectionalLink>,
+  vars: &[(Ident, Type)], links: &Vec<BidirectionalLink>,
 ) -> TokenStream {
   let mut b_links: BTreeMap<Ident, BTreeMap<Ident, BTreeSet<(Ident, Ident)>>> =
     BTreeMap::new();
@@ -128,7 +128,7 @@ pub(crate) fn make_bidirectional_link(
         let camel = upper_camel(link);
         vecs.push(quote!{
             (
-              Vec::from_iter(self.iter_link(Self::LinkMirrorEnum::#var(<#ty as tgraph::TypedNode>::LinkMirror::#camel))),
+              Vec::from_iter(self.iter_links(Self::LinkMirrorEnum::#var(<#ty as tgraph::TypedNode>::LinkMirror::#camel))),
               self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#var(<#ty as tgraph::TypedNode>::LinkMirror::#camel)),
             ),
           })

@@ -1,107 +1,9 @@
-use std::collections::HashSet;
-
 use proc_macro2::{self, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use syn::{Generics, Ident, Type, Visibility, parse_quote};
+use syn::{Generics, Ident, Type, Visibility};
 
 use crate::bidirectional::*;
-
-// pub(crate) fn check_type_distinct(vars: &Vec<(Ident, Type)>) -> bool{
-//   let mut s = HashSet::new();
-//   for (_, ty) in vars{
-//     if s.contains(ty) {
-//       return false;
-//     }
-//     s.insert(ty.clone());
-//   }
-//   true
-// }
-
-// pub(crate) fn make_query_by_type_trait_impl(
-//   result: &mut TokenStream, generics: &Generics, enumt: &Ident, ident: &Ident, ty: &Type,
-// ) {
-//   // let iter_ident = format_ident!("TGGenIter{}", ident);
-//   let (_, ty_generics, where_clause) = generics.split_for_impl();
-//   let mut params = generics.params.clone();
-//   params.push(syn::GenericParam::Lifetime(parse_quote!{'tg_gen_lifetime}));
-//   let generics2 = Generics{
-//     params,
-//     ..generics.clone()
-//   };
-//   let (impl_generics, _ , _ ) = generics2.split_for_impl();
-//   quote! {
-//     impl #impl_generics tgraph::QueryByType<'tg_gen_lifetime> for #ty #where_clause{
-//       type NodeEnumT = #enumt #ty_generics;
-//       fn iter_by_type(graph: &'tg_gen_lifetime tgraph::Graph<Self::NodeEnumT>) -> impl std::iter::Iterator<Item = (NodeIndex, &Self)>{
-//         graph.iter_nodes().filter_map(|(idx, node)|
-//           if let Self::NodeEnumT::#ident(x) = node {
-//             Some((*idx, x))
-//           } else {
-//             None
-//           }
-//         )
-//       }
-//       fn get_by_type(graph: &'tg_gen_lifetime tgraph::Graph<Self::NodeEnumT>, idx: tgraph::NodeIndex) -> Option<&Self>{
-//         graph.get_node(idx).and_then(|x| if let Self::NodeEnumT::#ident(y) = x { Some(y) } else { None })
-//       }
-//     }
-
-//     // #vis struct #iter_ident<'a> {
-//     //   it: tgraph::arena::Iter<'a, tgraph::NodeIndex, #enumt>
-//     // }
-//     // impl<'a> std::iter::Iterator for #iter_ident<'a>{
-//     //   type Item = (NodeIndex, &'a #ty);
-//     //   fn next(&mut self) -> Option<Self::Item> {
-//     //     self.it.next().and_then(|(idx, node)|
-//     //       if let #enumt::#ident(x) = node {
-//     //         Some((*idx, x))
-//     //       } else {
-//     //         self.next()
-//     //       }
-//     //     )
-//     //   }
-//     // }
-//     // impl<'a> std::iter::FusedIterator for #iter_ident<'a>{}
-//   }.to_tokens(result);
-// }
-
-// pub(crate) fn make_transaction_by_type_trait_impl(
-//   result: &mut TokenStream, generics: &Generics, enumt: &Ident, ident: &Ident, ty: &Type,
-// ) {
-//   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-//   quote! {
-//     impl #impl_generics tgraph::TransactionByType for #ty #where_clause{
-//       type NodeEnumT = #enumt #ty_generics;
-//       fn new_by_type(
-//         trans: &mut Transaction<Self::NodeEnumT>, node: Self,
-//       ) -> NodeIndex {
-//         trans.new_node(Self::NodeEnumT::#ident(node))
-//       }
-//       fn mut_by_type<'a, FuncT>(
-//         trans: &mut tgraph::Transaction<'a, Self::NodeEnumT>, idx: tgraph::NodeIndex, func: FuncT,
-//       ) where FuncT: FnOnce(&mut Self) + 'a {
-//         trans.mut_node(idx, |x|{
-//           if let Self::NodeEnumT::#ident(y) = x {
-//             func(y);
-//           } else {
-//             panic!("Type does not match!");
-//           }
-//         });
-//       }
-//       fn update_by_type<'a, FuncT>(
-//         trans: &mut tgraph::Transaction<'a, Self::NodeEnumT>, idx: tgraph::NodeIndex, func: FuncT,
-//       ) where FuncT: FnOnce(Self) -> Self + 'a {
-//         trans.update_node(idx, |x|{
-//           if let Self::NodeEnumT::#ident(y) = x {
-//             Self::NodeEnumT::#ident(func(y))
-//           } else {
-//             panic!("Type does not match!");
-//           }
-//         });
-//       }
-//     }
-//   }.to_tokens(result);
-// }
+use crate::group::*;
 
 pub(crate) fn make_source_enum(
   result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
@@ -167,12 +69,12 @@ pub(crate) fn make_node_type_mirror_enum(
 pub(crate) fn make_node_enum(
   result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
   source_enum_name: &Ident, link_mirror_enum_name: &Ident, node_type_mirror_name: &Ident,
-  bidirectional_links: &Vec<BidirectionalLink>,
+  bidirectional_links: &Vec<BidirectionalLink>, groups: &Vec<NamedGroup>
 ) {
   let mut iter_src_arms = Vec::new();
   for (ident, ty) in vars {
     iter_src_arms.push(quote! { Self::#ident(x) => Box::new(
-      <#ty as TypedNode>::iter_source(&x).map(|(idx, src)| (idx, Self::SourceEnum::#ident(src)))
+      <#ty as TypedNode>::iter_sources(&x).map(|(idx, src)| (idx, Self::SourceEnum::#ident(src)))
       ),
     });
   }
@@ -181,7 +83,7 @@ pub(crate) fn make_node_enum(
   for (ident, ty) in vars {
     iter_link_arms.push(quote! { Self::#ident(x) => {
         if let Self::LinkMirrorEnum::#ident(l) = link {
-          <#ty as TypedNode>::iter_link(&x, l)
+          <#ty as TypedNode>::iter_links(&x, l)
         } else {
           panic!("Unmatched node type and link type!")
         }
@@ -249,14 +151,14 @@ pub(crate) fn make_node_enum(
   let mut get_link_by_name_arms = Vec::new();
   for (ident, _) in vars {
     get_link_by_name_arms.push(quote! {
-      Self::#ident(x) => x.get_link_by_name(name),
+      Self::#ident(x) => x.get_links_by_name(name),
     });
   }
 
   let mut get_link_by_group_arms = Vec::new();
   for (ident, _) in vars {
     get_link_by_group_arms.push(quote! {
-      Self::#ident(x) => x.get_link_by_group(name),
+      Self::#ident(x) => x.get_links_by_group(name),
     });
   }
 
@@ -279,6 +181,7 @@ pub(crate) fn make_node_enum(
   }
 
   let bidirectional_link = make_bidirectional_link(vars, bidirectional_links);
+  let in_group = make_in_group(groups);
 
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
   quote!{
@@ -286,12 +189,12 @@ pub(crate) fn make_node_enum(
       type SourceEnum = #source_enum_name #ty_generics;
       type LinkMirrorEnum = #link_mirror_enum_name #ty_generics;
       type NodeTypeMirror = #node_type_mirror_name;
-      fn iter_source(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>> {
+      fn iter_sources(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>> {
         match self {
           #(#iter_src_arms)*
         }
       }
-      fn iter_link(&self, link: Self::LinkMirrorEnum) -> Box<dyn Iterator<Item = NodeIndex> + '_> {
+      fn iter_links(&self, link: Self::LinkMirrorEnum) -> Box<dyn Iterator<Item = NodeIndex> + '_> {
         match self {
           #(#iter_link_arms)*
         }
@@ -316,16 +219,18 @@ pub(crate) fn make_node_enum(
           #(#check_link_arms)*
         }
       }
-      fn get_link_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
+      fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
         match self{
           #(#get_link_by_name_arms)*
         }
       }
-      fn get_link_by_group(&self, name: &'static str) -> Vec<tgraph::NodeIndex>{
+      fn get_links_by_group(&self, name: &'static str) -> Vec<tgraph::NodeIndex>{
         match self{
           #(#get_link_by_group_arms)*
         }
       }
+
+      #in_group
 
       fn data_ref_by_name<T: std::any::Any>(&self, name: &'static str) -> Option<&T> {
         match self{

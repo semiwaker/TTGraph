@@ -23,17 +23,17 @@ pub struct Node<T: Any> {
   data: T,
 }
 
-// node_enum! {
-//   #[derive(Debug)]
-//   enum BidirectionalGraph<NodeDataT: Any, EdgeDataT: Any> {
-//     Node(Node<NodeDataT>),
-//     Edge(BidirectionalEdge<EdgeDataT>),
-//   }
-//   bidirectional!{
-//     Node.tos <-> Edge.from,
-//     Node.froms <-> Edge.to
-//   }
-// }
+node_enum! {
+  #[derive(Debug)]
+  enum BidirectionalGraph<NodeDataT: Any, EdgeDataT: Any> {
+    Node(Node<NodeDataT>),
+    Edge(BidirectionalEdge<EdgeDataT>),
+  }
+  bidirectional!{
+    Node.tos <-> Edge.from,
+    Node.froms <-> Edge.to
+  }
+}
 
 #[derive(TypedNode, Debug)]
 #[StructFields(pub)]

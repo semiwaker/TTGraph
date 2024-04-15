@@ -61,8 +61,62 @@ mod test_bidirectional {
     graph.commit(trans);
 
     let node = graph.get_node(x5).unwrap();
-    assert_eq!(node.get_link_by_group("group1"), vec![x1, x2, x3]);
-    assert_eq!(node.get_link_by_group("group2"), vec![x4, x1, x3]);
-    assert_eq!(node.get_link_by_group("x"), vec![x1, x2, x3, x1, x3]);
+    assert_eq!(node.get_links_by_group("group1"), vec![x1, x2, x3]);
+    assert_eq!(node.get_links_by_group("group2"), vec![x4, x1, x3]);
+    assert_eq!(node.get_links_by_group("x"), vec![x1, x2, x3, x1, x3]);
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct NodeA {
+    a: usize,
+  }
+  #[derive(TypedNode, Debug)]
+  struct NodeB {
+    b: usize,
+  }
+  #[derive(TypedNode, Debug)]
+  struct NodeC {
+    c: usize,
+  }
+  #[derive(TypedNode, Debug)]
+  struct NodeD {
+    d: usize,
+  }
+
+  node_enum! {
+    #[derive(Debug)]
+    enum MultiNodes{
+      A(NodeA),
+      B(NodeB),
+      C(NodeC),
+      D(NodeD),
+    }
+    group!{
+      first{A, B},
+      second{C, D},
+      third{A, D},
+      one{B},
+      all{A, B, C, D},
+    }
+  }
+
+  #[test]
+  fn test_node_group() {
+    let ctx = Context::new();
+    let mut graph = Graph::<MultiNodes>::new(&ctx);
+    let mut trans = Transaction::new(&ctx);
+
+    let a = trans.new_node(MultiNodes::A(NodeA { a: 1 }));
+    let b = trans.new_node(MultiNodes::B(NodeB { b: 2 }));
+    let c = trans.new_node(MultiNodes::C(NodeC { c: 3 }));
+    let d = trans.new_node(MultiNodes::D(NodeD { d: 4 }));
+
+    graph.commit(trans);
+
+    assert_eq!(Vec::from_iter(graph.iter_group("first").map(|(x, _)| x)), vec![a, b]);
+    assert_eq!(Vec::from_iter(graph.iter_group("second").map(|(x, _)| x)), vec![c, d]);
+    assert_eq!(Vec::from_iter(graph.iter_group("third").map(|(x, _)| x)), vec![a, d]);
+    assert_eq!(Vec::from_iter(graph.iter_group("one").map(|(x, _)| x)), vec![b]);
+    assert_eq!(Vec::from_iter(graph.iter_group("all").map(|(x, _)| x)), vec![a, b, c, d]);
   }
 }

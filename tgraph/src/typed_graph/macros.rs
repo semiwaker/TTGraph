@@ -50,10 +50,15 @@ macro_rules! get_node {
 /// struct NodeA{
 ///   a: usize
 /// }
+/// #[derive(TypedNode)]
+/// struct NodeB{
+///   b: usize
+/// }
 ///
 /// node_enum!{
 ///   enum MyNodeEnum{
-///     A(NodeA)
+///     A(NodeA),
+///     B(NodeB),
 ///   }
 /// }
 ///
@@ -63,6 +68,7 @@ macro_rules! get_node {
 ///
 /// trans.new_node(MyNodeEnum::A(NodeA{ a: 1 }));
 /// trans.new_node(MyNodeEnum::A(NodeA{ a: 2 }));
+/// trans.new_node(MyNodeEnum::B(NodeB{ b: 0 }));
 /// graph.commit(trans);
 ///
 /// let iterator = iter_nodes!(graph, MyNodeEnum::A);
@@ -74,17 +80,19 @@ macro_rules! get_node {
 #[macro_export]
 macro_rules! iter_nodes {
   ($graph: expr, $var: path) => {
-    $graph.iter_nodes().filter_map(|(idx, node)| {
-      if let $var(x) = node {
-        Some((*idx, x))
-      } else {
-        None
-      }
-    })
+    $graph.iter_nodes().filter_map(
+      |(idx, node)| {
+        if let $var(x) = node {
+          Some((idx, x))
+        } else {
+          None
+        }
+      },
+    )
   };
 }
 
-/// Use the `mut_node` method of the transaction, assume the node is $var variant of the NodeEnum.
+/// Use the [`mut_node`](crate::Transaction::<T>::mut_node) method of the transaction, assume the node is $var variant of the NodeEnum.
 /// Panics if the enum does not match.
 ///
 /// # Example
@@ -133,7 +141,7 @@ macro_rules! mut_node {
   };
 }
 
-/// Use the `update_node` method of the transaction, assume the node is $var variant of the NodeEnum.
+/// Use the [`update_node`](crate::Transaction::<T>::update_node) method of the transaction, assume the node is $var variant of the NodeEnum.
 /// Panics if the enum does not match.
 ///
 /// # Example

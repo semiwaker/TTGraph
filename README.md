@@ -1,298 +1,348 @@
 # TGraph README
 
-## Intro
+TGraph is: 
++ A container or database for many different data, which cross-reference each other, forming a graph-like data structure. 
++ **Typed graph:** A collection of multiple types of nodes. Each node hold some private data, and some pointers/edges/references to other nodes.
++ **Transactional graph:** All operations on the graph are organized by transaction, which means an atomic group of operation is applied at the same time.
 
-TGraph is short for transactional graph, which aims to provide a graph-like data structure while solving the disturbing problems caused by mutable references and lifetimes in Rust.
+TGraph provides:
++ A convinient container for different types of data, which provides some useful methods to deal with types.
++ A data struct to maintain the connection between nodes. TGraph create a reflection for all types to track the connection between nodes, named as *link*. This allows some fancy operations, such as redirect links and maintain bidirectional links.
++ A clean interface to help get rid of some annoying compile errors. The design of transaction tries to prevent having a non-mutable reference and a mutable reference of the same object at the same time, and tries not to get into a maze of lifetimes.
++ TGraph is originally designed as an Intermediate Representation system for compilers, but its potential is not limited. 
 
-The graph is connected by generated indexes instead of references or smart pointers to avoid lifetime problems. Here is an example of an `Edge` structure, which used `NodeIndex` to indicate the connected nodes.
+TGraph does **not** currently provides, but may be improved in the future:
++ Very high performance. Though TGraph operations are relatively cheap (mostly O(log(n))), it is not a high performance database.
++ Very large capacity. All data are stored in memory.
+
+# Motivational Example
+
+## Typed Node Declaration
+
+Assume there are a few factories, workers and products, the following example use TGraph to maintain their data.
 
 ```rust
-struct Edge<DataT>{
-    data: DataT,
-    from: NodeIndex,
-    to: NodeIndex
+use tgraph::*;
+use std::collections::HashSet;
+
+#[derive(TypedNode)]
+struct FactoryNode{
+  name: String,
+  workers: HashSet<NodeIndex>,
+  products: HashSet<NodeIndex>,
+}
+
+#[derive(TypedNode)]
+struct WorkerNode{
+  name: String,
+  factory: NodeIndex,
+  produced: Vec<NodeIndex>,
+}
+
+#[derive(TypedNode)]
+struct ProductNode{
+  id: usize
 }
 ```
 
-All modifications on the graph is stored in a separated `Transaction` structure, so there is no `&mut` reference to the graph itself.
+Here, a factory have a name, multiple workers and products. `name` is a **data field**, which TGraph does not care about. It can be any type in Rust. 
 
-Query and update are separated by such design.
+`workers` and `products` are **links**. A link is a connection to another node. TGraph use `NodeIndex` to index a node, which impls `Copy`. If field is one of the following types, it is treated as a link. (Note: types are matched by name in the macros, `tgraph::NodeIndex`/`NodeIndex`/`std::collections::Vec::<NodeIndex>`/`Vec::<tgraph::NodeIndex>` are all acceptable.)
 
-The graph **can** be queried by immutable references, but **can not** be updated except for commiting the transaction.
++ Direct link: `NodeIndex`
++ Vector link: `Vec<NodeIndex>`
++ Unordered set link: `HashSet<NodeIndex>`
++ Ordered set link: `BTreeSet<NodeIndex>`
 
-The transaction **can** be updated by mutable references, but **can not** be queried.
+## Graph and Transaction
+
+Next example shows how to build a graph. 
 
 ```rust
-// Create a context
-let context = Context::new();
-// Create a graph
-let mut graph = Graph::<i64, i64>::new(&context);
-// Create an transaction
-let mut trans = Transaction::new(&context);
+// Use an node_enum to collect all node types together
+node_enum!{
+  enum Node{
+    Factory(FactoryNode),
+    Worker(WorkerNode),
+    Product(ProductNode),
+  }
+}
 
-// Add some nodes and edges into the transaction
-let n1 = trans.new_node(1);
-let n2 = trans.new_node(2);
-let e1 = trans.new_edge(-1, n1, n2);
+// Create the context
+let ctx = Context::new();
+// Create a graph of Node
+let mut graph = Graph::<Node>::new(&ctx);
 
-// Commite the transaction back into the graph
+// Does some initial operations with a transaction
+// Actual type: Transaction::<Node>, <Node> can be inferenced when commited
+let mut trans = Transaction::new(&ctx);
+let product1 = trans.new_node(Node::Product(ProductNode{ id: 1 }));
+let product2 = trans.new_node(Node::Product(ProductNode{ id: 2 }));
+let worker1 = trans.alloc_node();
+let worker2 = trans.alloc_node();
+let factory = trans.new_node(Node::Factory(FactoryNode{ 
+  name: "Factory".to_string(),
+  workers: HashSet::from([worker1, worker2]),
+  products: HashSet::from([product1, product2]),
+}));
+trans.fill_back_node(worker1, Node::Worker(WorkerNode{
+  name: "Alice".to_string(),
+  factory,
+  produced: product2,
+}));
+trans.fill_back_node(worker2, Node::Worker(WorkerNode{
+  name: "Bob".to_string(),
+  factory,
+  produced: product1,
+}));
+
+// Commit the transaction to the graph
+graph.commit(trans);
+
+// Get the factory node back
+let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
+assert_eq!(factory_node.name, "Factory");
+assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
+assert_eq!(factory_node.products, HashSet::from([product1, product2]));
+```
+
+First, the `node_enum!` macro is used to create a enum to collect all types of nodes. It is a proc_macro instead of proc_macro_derive for extendable syntax in the latter examples. The enum inside of `node_enum!` will implements trait `NodeEnum` and can be used in `Graph`.
+
+```rust
+node_enum!{
+  enum Node{
+    Factory(FactoryNode),
+    Worker(WorkerNode),
+    Product(ProductNode),
+  }
+}
+```
+
+Then, create a context and a graph using that context. The context is used to ensure the NodeIndexes are consistent across all transactions. Graph does not hold a reference to the context, so it is the user's reponsibility to keep it.
+
+```rust
+let ctx = Context::new();
+let mut graph = Graph::<Node>::new(&ctx);
+```
+
+Next, a transaction is created using the same context as the graph. After operations are done on the transcations, it can be committed to the graph. Transaction does not hold a reference to the graph and they have independent lifetime. (Though, it does nothing if a transaction outlives the graph)
+
+```rust
+let mut trans = Transaction::new(&ctx);
+// Do something with trans
 graph.commit(trans);
 ```
 
-There are two kinds of graph structure in TGraph.
-
-+ `tgraph::graph` is a simple directed graph, which have a node type and an edge type. Nodes and edges both holds data.
-+ `tgraph::typed_graph` is a directed graph, which only have a node type. An Edge is only a NodeIndex without data. Edges in a node are categorized by "types" as members of the node struct.
-
-## `tgraph::graph`
-
-### Node struct
+Now we take a closer look on how to build the graph. `Product` nodes are the simplest, it only have a id. Use `new_node` to add a node into the transaction. It returns a `NodeIndex` pointing to the new node, which means later we can use `product1` and `product2` to retrieve the node from the graph.
 
 ```rust
-pub struct Node<NDataT> {
-    idx: NodeIndex, // Index to itself
-    data: NDataT,
-    in_edges: HashSet<EdgeIndex>,
-    out_edges: HashSet<EdgeIndex>,
+let product1 = trans.new_node(Node::Product(ProductNode{ id: 1 }));
+let product2 = trans.new_node(Node::Product(ProductNode{ id: 2 }));
+```
+
+Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TGraph does operations in transaction, we can first allocate a `NodeIndex` for the workers, then fill the data back. The transaction prevents dangling `NodeIndex` by checking all allocated nodes are filled back when committed.
+
+```rust
+let worker1 = trans.alloc_node();
+let worker2 = trans.alloc_node();
+let factory = trans.new_node(Node::Factory(FactoryNode{ 
+  name: "Factory".to_string(),
+  workers: HashSet::from([worker1, worker2]),
+  products: HashSet::from([product1, product2]),
+}));
+trans.fill_back_node(worker1, Node::Worker(WorkerNode{
+  name: "Alice".to_string(),
+  factory,
+  produced: product2,
+}));
+trans.fill_back_node(worker2, Node::Worker(WorkerNode{
+  name: "Bob".to_string(),
+  factory,
+  produced: product1,
+}));
+```
+
+Finally, after committing the transaction to the graph, we have a graph with the nodes described above. We can use `NodeIndex` to get the node back. `get_node!` macro is used when the type of the node is previously known, which returns an `Option<&TypedNode>` to indicate if the node is avaiable.
+```rust
+let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
+assert_eq!(factory_node.name, "Factory");
+assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
+assert_eq!(factory_node.products, HashSet::from([product1, product2]));
+```
+
+For more operations, please view the documents on struct `Graph` and `Transcation`.
+
+## Bidiretional links
+
+TGraph supports bidirectional link declaration. In this example, the `workers` field of `Factory` and the `factory` field of `Worker` is in fact a pair of bidirectional link. We can modify the `node_enum!` declaration for more supports.
+
+```rust
+node_enum!{
+  enum Node{
+    Factory(FactoryNode),
+    Worker(WorkerNode),
+    Product(ProductNode),
+  }
+  bidirectional!{
+    Factory.workers <-> Worker.factory,
+  }
 }
-```
 
-### Edge struct
+let ctx = Context::new();
+let mut graph = Graph::<Node>::new(&ctx);
 
-```rust
-pub struct Edge<EDataT> {
-    idx: EdgeIndex, // Index to itself
-    data: EDataT,
-    from: NodeIndex,
-    to: NodeIndex,
-}
-```
+let mut trans = Transaction::new(&ctx);
+let product1 = trans.new_node(Node::Product(ProductNode{ id: 1 }));
+let product2 = trans.new_node(Node::Product(ProductNode{ id: 2 }));
+let factory = trans.new_node(Node::Factory(FactoryNode{ 
+  name: "Factory".to_string(),
+  workers: HashSet::new(),
+  products: HashSet::from([product1, product2]),
+}));
+let worker1 = trans.new_node(Node::Worker(WorkerNode{
+  name: "Alice".to_string(),
+  factory,
+  produced: product2,
+}));
+let worker2 = trans.new_node(Node::Worker(WorkerNode{
+  name: "Bob".to_string(),
+  factory,
+  produced: product1,
+}));
 
-### Create a graph and transaction
-
-```rust
-// Create a context
-let context = Context::new();
-// Create a graph
-let mut graph = Graph::<NDataT, EDataT>::new(&context);
-// Create an transaction, data types may be inferred
-let mut trans = Transaction::<NDataT, EDataT>::new(&context);
-```
-
-### Work on transaction
-
-Add a new node
-
-```rust
-let node_idx = trans.new_node(data);
-```
-
-Add a new edge, the `in_edges` of `to` and `out_edges` of `from` will be modified after commitment.
-
-```rust
-let edge_idx = trans.new_edge(data, from, to);
-```
-
-Remove a node or an edge that is in the graph or just added into the transaction.
-
-```rust
-trans.remove_node(node_idx);
-trans.remove_edge(edge_idx);
-```
-
-Mutate the data inside of a node or edge inplace with a closure, where the data is acquired by `&mut`.
-
-```rust
-trans.mut_node(node_idx, |&mut node_data| {...});
-trans.mut_edge(edge_idx, |&mut edge_data| {...});
-```
-
-Update the data inside of a node or edge out-of-place with a closure, where the ownership of the data is moved out of the container.
-
-```rust
-trans.update_node(node_idx, |old_data| {...; new_data});
-trans.update_edge(edge_idx, |old_data| {...; new_data});
-```
-
-### Query
-
-Get a node or an edge by index
-
-```rust
-let node_option = graph.get_node(node_idx);
-let edge_option = graph.get_edge(edge_idx);
-```
-
-Iterate all nodes or edges
-
-```rust
-for (idx, node) in graph.iter_nodes() {
-    //...
-}
-for (idx, edge) in graph.iter_edges() {
-    //...
-}
-```
-
-Iterate all in-edges or out-edges of a node
-
-```rust
-for (edge_idx, from_idx) in graph.iter_in(node_idx){
-    // ...
-}
-for (edge_idx, to_idx) in graph.iter_out(node_idx){
-    // ...
-}
-```
-
-Get the number of nodes and edges
-
-```rust
-graph.len_nodes()
-graph.len_edges()
-```
-
-### Commitment
-
-Commit a transaction back into a graph. A transaction cannot be committed twice. The graph and the transaction should share the same context so the indexes does not conflict with each other.
-
-```rust
 graph.commit(trans);
+
+// Get the factory node back
+let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
+assert_eq!(factory_node.name, "Factory");
+assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
+assert_eq!(factory_node.products, HashSet::from([product1, product2]));
 ```
 
-Give up the transaction to prevent being committed into a graph.
+Here, the `bidiretional!` macro inside of `node_enum!` macro is used to declare bidirecitonal links.
 
-```rust
-trans.give_up();
-```
++ Use `variant.field <-> variant.field,` to indicate a pair of bidirecitonal links. Note: variant of the enum, not type!
++ `bidiretional!` is not actually a macro, it can only be used inside of `node_enum!`
 
-Commit order:
+Next, when making the factory node, its workers are simply left empty. However, after commited to the graph, TGraph automatically adds the bidirectional links into it.
 
-+ Add new nodes / edges.
-+ Modify nodes / edges.
-+ Update nodes / edges.
-+ Remove nodes / edges. So that new nodes / edges can be removed.
+Rules of bidiretional links are:
 
-### Printing
++ Bidirectional links may be formed between: a pair of `NodeIndex`, between `NodeIndex` and `Set<NodeIndex>`, a pair of `Set<NodeIndex>`. (`Set` may be `HashSet` or `BTreeSet`, `Vec` is not supported currently)
++ `NodeIndex` field: link can be added if it is `NodeIndex::empty`, otherwise it conflicts and panics. Link can be removed if it is not empty, but does not panic if it is.
++ `Set<NodeIndex>` field: link can always be added into or removed from the set.
++ When modifying existing pairs of bidiretional links, ensure the modification happens in the same transaction. TGraph does all other operations before maintaining bidiretional links.
 
-If `std::fmt::Display` is implemented for `NDataT` and `EDataT`:
+## Get data by name and group
 
-```rust
-println!("{}", graph);
-```
+TGraph supports few operations for type erasure, targeting cases that some typed nodes have some similar fields, and matching the enum for these field is verbose. 
 
-Result:
+Following last example, assume there are two types of workers, robots and humans. They may have very different data, but they both have a name. Now we want to make a name list for all the workers. Typical solution is to match the NodeEnum, but TGraph gives another solution by getting data by name. 
 
-```txt
-Graph {
-  nodes: [
-     Node { idx: 4, data: 4, in_edges: [], out_edges: [3, 4, ]},
-     Node { idx: 5, data: 15, in_edges: [5, ], out_edges: []},
-     Node { idx: 2, data: 10, in_edges: [3, ], out_edges: [5, ]},
-     Node { idx: 3, data: 3, in_edges: [4, 2, ], out_edges: []},
-  ],
-  edges: [
-     Edge{ idx: 4, data: -4, from: 4, to: 3 },
-     Edge{ idx: 3, data: -3, from: 4, to: 2 },
-     Edge{ idx: 5, data: -5, from: 2, to: 5 },
-     Edge{ idx: 2, data: -2, from: 1, to: 3 },
-  ]
-}
-```
-
-## `tgraph::typed_graph`
-
-### Node structure
-
-Each type of node is almost purely user-defined, the general form is as followed.
+`data_ref_by_name::<Type>::(&'static str name) -> Option<&Type>` method provides an interface to access a data field by its name. If the node have that field and the type matches (through `any::downcast_ref`), `Some(&Type)` is returned, otherwise `None` is returned.
 
 ```rust
 #[derive(TypedNode)]
-struct MyNodeType{
-    // data members can have any types
-    some_data: DataType1,
-    some_other_data: DataType2,
-    // ...
+struct HumanWorkerNode{
+  name: String,
+  // ... other data
+}
+#[derive(TypedNode)]
+struct RobotWorkerNode{
+  name: String,
+  // ... other data
+}
 
-    // Edges to other nodes
+node_enum!{
+  enum Node{
+    Human(HumanWokerNode),
+    Robot(RobotWokerNode),
+    // ... other nodes
+  }
+}
 
-    // An edge with name `a`
-    a: NodeIndex
-    // An edge with name `b`
-    b: NodeIndex
-    // An set of edges with name 'c'
-    c: HashSet<NodeIndex>
-    // Currently only NodeIndex, HashSet<NodeIndex>, BTreeSet<NodeIndex> and Vec<NodeIndex> are supported
-    // Nesting is not allowed
+let ctx = Context::new();
+let mut graph = Graph::<Node>::new(&ctx);
+// ... building the graph
+
+// idx: NodeIndex, node: &Node
+let node = graph.get_node(idx).unwrap();
+
+// Not so convinient way to get the name
+let name = match node {
+  Node::Human(human) => Some(&human.name),
+  Node::Robot(robot) => Some(&robot.name),
+  _ => None
+}
+
+// A simplified solution
+// Here, "name" is the field's name
+// The "name" field is a String, so this variable is an Option<&str>
+let name = node.data_ref_by_name::<String>::("name");
+```
+
+Further more, if we want to iterate all workers, skipping all the other nodes, the grouping mechanism in TGraph can come to use.
+
+Here, the two variant `Human` and `Robot` is in the `worker` group. Use the `iter_group(&'static str)` method to iterate all nodes within the group.
+
+Notes: 
+
++ Variants can be inside multiple or none groups.
++ Currently, this method does not provide performance enhancement, as it is only a wrapper on matching the variants according to the group name.
+
+```rust
+node_enum!{
+  enum Node{
+    Human(HumanWokerNode),
+    Robot(RobotWokerNode),
+    // ... other nodes
+  }
+  group!{
+    worker{Human, Robot},
+  }
+}
+
+for (idx, node) in graph.iter_group("worker") {
+  let name = node.data_ref_by_name::<String>::("name").unwrap();
+  // ...
 }
 ```
 
-For example, an binary operation node.
+Links may be grouped too. Assume workers may produce different kinds of products, and make them into a `product` group can help iterate through all of them.
+
+Notes:
++ A link field can be inside multiple or none groups. Syntax: `#[group(group1, group2, ...)]`
++ Yes, its form is inconsitent with `node_enum!`. The problem is if a struct is inside a macro, the linter (rust-analyzer) fails to show its content. The author personally thinks the `group!` form is more elegent, but does not worth ruining the linter.
 
 ```rust
 #[derive(TypedNode)]
-struct BinaryOp{
-    op_type: OpType,
-    in1: NodeIndex,
-    in2: NodeIndex,
-    out: NodeIndex
+struct HumanWorkerNode{
+  name: String,
+  #[group(product)]
+  cooked: BTreeSet<NodeIndex>,
+  #[group(product)]
+  maked: BTreeSet<NodeIndex>,
+  // ... other data
 }
-```
-
-An reduce operation node that have indefinite inputs.
-
-```rust
 #[derive(TypedNode)]
-struct ReduceOp{
-    op_type: OpType,
-    inputs: HashSet<NodeIndex>,
-    out: NodeIndex
+struct RobotWorkerNode{
+  name: String,
+  #[group(product)]
+  manufactured: BTreeSet<NodeIndex>,
+  // ... other data
+}
+
+let node = graph.get_node(idx).unwrap();
+for idx in node.get_links_by_group("product") {
+  // Now idx binds to all NodeIndex inside the product group
 }
 ```
 
-### NodeEnum
+Other methods for type erasure are listed in the document of `NodeEnum` and `TypedNode` traits.
 
-All types of nodes in a graph is integrated into a NodeEnum, which have the following general form.
+# Working In Progress
 
-```rust
-// Should derive NodeEnum and have no generics
-#[derive(NodeEnum)]
-enum NodeTypeEnum {
-    // Name(Type)
-    A(NodeTypeA),
-    B(NodeTypeB),
-    Edge(Edge<i32>),
-    // ...
-}
-```
-
-Create a graph with the node enum
-
-```rust
-let context = Context::new();
-let mut graph = Graph::<NodeTypeEnum>::new(&context);
-```
-
-### Transaction and queries
-
-The operation on the transation and the queries on the graph is similar to `tgraph::graph`. Here only list the different ones.
-
-Iterate nodes by type.
-
-```rust
-for (idx, node) in NodeTypeA::iter_by_type(&graph) {
-    // node: NodeTypeA
-    // ...
-}
-```
-
-Redirect all links to a node. All nodes connecting to the old node in the graph will be modified. For example, if `a.input = b`, after redirect `b` to `c`, we will have `a.input = c`. 
-Redirection happens before inserting new nodes, so new nodes in the transaction will not be redicted. Use `redirect_all` if new nodes are required to be redirected as well.
-
-```rust
-trans.redirect_node(old_idx, new_idx);
-```
-
-### Performance notifications
-
-The graph maintains some backward links to help the replace operation. In modify and update operations, we don't know which edges the user exactly changed, so we need to remove all the old backward links and scan the node again.
++ Stronger typed. NodeIndex is actually untyped, so a link can be connected to any node. A macro to indicate which enum variant a link can connect to, and a runtime check may be added in the future.
++ Graph creation macro. A sub-language to simplify great amount of `alloc_node`, `fill_back_node` and `new_node` calls.
++ Graph transition. A way to conviently transit `Graph<NodeEnumA>` to `Graph<NodeEnumB>`, if `NodeEnumA` and `NodeEnumB` have a lot of common variants.
++ Check when commit. A way to add runtime check when commit.

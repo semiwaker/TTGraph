@@ -119,12 +119,28 @@ mod tests_typed {
     println!("{}", graph);
     trans = Transaction::new(&context);
 
-    trans.redirect_node(c, b);
-    trans.redirect_node(b, a);
-    trans.redirect_node(d, c);
+    trans.redirect_links(c, b);
+    trans.redirect_links(b, a);
+    trans.redirect_links(d, c);
 
     graph.commit(trans);
 
     println!("{}", graph);
+  }
+
+  #[test]
+  fn uncommit_test() {
+    let context = Context::new();
+    let mut graph = Graph::<TestNode>::new(&context);
+    let mut trans = Transaction::<TestNode>::new(&context);
+
+    let a = trans.alloc_node();
+    let b = trans.alloc_node();
+    let c = trans.alloc_node();
+    let d = trans.new_node(TestNode::CNode(CNode { tos: BTreeSet::new() }));
+    trans.fill_back_node(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
+    trans.fill_back_node(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
+    trans
+      .fill_back_node(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
   }
 }

@@ -31,14 +31,13 @@ pub(crate) struct NamedGroupVec {
 
 impl Parse for NamedGroupVec {
   fn parse(input: ParseStream) -> syn::Result<Self> {
-    let _: Token![;] = input.parse()?;
     let inside = input.parse_terminated(NamedGroup::parse, Token![,])?;
     Ok(NamedGroupVec { groups: inside.into_iter().collect() })
   }
 }
 
-pub(crate) fn make_get_link_by_group(
-  links: &Vec<LinkType>, groups: &Vec<Vec<Ident>>,
+pub(crate) fn make_get_links_by_group(
+  links: &[LinkType], groups: &[Vec<Ident>],
 ) -> TokenStream {
   let mut group_map: BTreeMap<Ident, Vec<LinkType>> = BTreeMap::new();
   for (link, group) in links.iter().zip(groups.iter()) {
@@ -70,10 +69,34 @@ pub(crate) fn make_get_link_by_group(
     });
   }
   quote! {
-    fn get_link_by_group(&self, name: &'static str) -> Vec<tgraph::NodeIndex> {
+    fn get_links_by_group(&self, name: &'static str) -> Vec<tgraph::NodeIndex> {
       match name{
         #(#arms)*
         _ => vec![],
+      }
+    }
+  }
+}
+
+pub(crate) fn make_in_group(groups: &Vec<NamedGroup>) -> TokenStream {
+  let mut name_arms = Vec::new();
+  for NamedGroup { name, idents } in groups {
+    let mut matched_vars = Vec::new();
+    for i in idents {
+      matched_vars.push(quote! {Self::#i(_)});
+    }
+    name_arms.push(quote! {
+      std::stringify!(#name) => match self {
+        #(#matched_vars)|* => true,
+        _ => false,
+      },
+    });
+  }
+  quote! {
+    fn in_group(&self, name: &'static str) -> bool {
+      match name {
+        #(#name_arms)*
+        _ => false,
       }
     }
   }

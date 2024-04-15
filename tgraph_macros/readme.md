@@ -1,5 +1,7 @@
 # TGraph macro
 
+Explanation for some of the macros.
+
 ## TypedNode
 
 ```rust

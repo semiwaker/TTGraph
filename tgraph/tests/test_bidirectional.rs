@@ -178,22 +178,26 @@ mod test_bidirectional {
     );
 
     graph.commit(trans);
-    (ctx, graph, GraphUnderTest {
-      gn1,
-      gn2,
-      gn3,
-      pn1,
-      pn2,
-      pn3,
-      tn1,
-      tn2,
-      tn3,
-      tn4,
-      bn,
-      dn1,
-      dn2,
-      dn3,
-    })
+    (
+      ctx,
+      graph,
+      GraphUnderTest {
+        gn1,
+        gn2,
+        gn3,
+        pn1,
+        pn2,
+        pn3,
+        tn1,
+        tn2,
+        tn3,
+        tn4,
+        bn,
+        dn1,
+        dn2,
+        dn3,
+      },
+    )
   }
 
   #[test]
@@ -806,11 +810,11 @@ mod test_bidirectional {
 
     let mut trans = Transaction::new(&ctx);
 
-    trans.redirect_node(gn2, gn3);
-    trans.redirect_node(pn2, pn3);
-    trans.redirect_node(tn2, tn3);
+    trans.redirect_links(gn2, gn3);
+    trans.redirect_links(pn2, pn3);
+    trans.redirect_links(tn2, tn3);
     let bn2 = trans.new_node(NodeType::BoxNode(BoxNode { inside: BTreeSet::new() }));
-    trans.redirect_node(bn, bn2);
+    trans.redirect_links(bn, bn2);
 
     graph.commit(trans);
 

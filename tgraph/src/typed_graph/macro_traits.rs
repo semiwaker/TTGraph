@@ -3,10 +3,11 @@ use visible::StructFields;
 use super::*;
 
 /// A helper trait for the graph to trace all links in the nodes
+/// Intented to be automatically derived
 /// # Example
 /// ```rust
-/// use tgraph::typed_graph::*;
-/// use tgraph_macros::*;
+/// use tgraph::*;
+/// use std::collections::{HashSet, BTreeSet};
 /// #[derive(TypedNode)]
 /// struct SomeNode {
 ///   a_link: NodeIndex,
@@ -24,10 +25,11 @@ pub trait TypedNode: Sized {
   type Iter: SourceIterator<Self, Source = Self::Source>;
 
   /// Iterate the links and its source reflection
-  fn iter_source(&self) -> Self::Iter;
+  fn iter_sources(&self) -> Self::Iter;
   /// Iterate the linked node of the specified link
-  fn iter_link(&self, link: Self::LinkMirror)
-    -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  fn iter_links(
+    &self, link: Self::LinkMirror,
+  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Modify a link by source, return (remove_sucess, add_success)
   fn modify_link(
     &mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex,
@@ -44,11 +46,11 @@ pub trait TypedNode: Sized {
   /// Get the name of the links
   fn link_names() -> &'static [&'static str];
   /// Get the links by name
-  fn get_link_by_name(
+  fn get_links_by_name(
     &self, name: &'static str,
   ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Get the links by group name
-  fn get_link_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
+  fn get_links_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
 
   // fn data_types() -> [TypeId];
   /// Get the name of the data
@@ -64,10 +66,10 @@ pub trait TypedNode: Sized {
 }
 
 /// A helper trait to declare a enum of all typed nodes
+/// Intented to be automatically generated
 /// # Example
 /// ```rust
-/// use tgraph::typed_graph::*;
-/// use tgraph_macros::*;
+/// use tgraph::*;
 /// #[derive(TypedNode)]
 /// struct A{
 ///   a: NodeIndex,
@@ -78,10 +80,11 @@ pub trait TypedNode: Sized {
 ///   b: NodeIndex,
 /// }
 ///
-/// #[derive(NodeEnum)]
-/// struct Node{
-///   NodeTypeA(A),
-///   AnotherNodeType(B),
+/// node_enum!{
+///   enum Node{
+///     NodeTypeA(A),
+///     AnotherNodeType(B),
+///   }
 /// }
 /// ```
 pub trait NodeEnum {
@@ -89,9 +92,9 @@ pub trait NodeEnum {
   type LinkMirrorEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   type NodeTypeMirror: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   /// Iterate the links and its source reflection
-  fn iter_source(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
+  fn iter_sources(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
   /// Iterate the links and its link reflection
-  fn iter_link(
+  fn iter_links(
     &self, link: Self::LinkMirrorEnum,
   ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Modify a link by source
@@ -105,11 +108,14 @@ pub trait NodeEnum {
   /// Check if the link and the node is of the same type
   fn check_link(&self, link: Self::LinkMirrorEnum) -> bool;
   /// Get the links by name
-  fn get_link_by_name(
+  fn get_links_by_name(
     &self, name: &'static str,
   ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Get the links by group name
-  fn get_link_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
+  fn get_links_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
+
+  /// Tell if this node is inside the named group
+  fn in_group(&self, name: &'static str) -> bool;
 
   /// Try to get the reference of a data by name
   fn data_ref_by_name<T: Any>(&self, name: &'static str) -> Option<&T>;
@@ -133,6 +139,8 @@ pub trait NodeEnum {
 }
 
 pub type BidirectionalLinks<LinkMirrorT> = Vec<(Vec<NodeIndex>, Vec<LinkMirrorT>)>;
+
+/// The side effect of `modify_node`, intent to be used by macros
 #[StructFields(pub)]
 #[derive(Clone, Debug)]
 pub struct BidirectionalSideEffect<LinkMirrorT> {
@@ -141,6 +149,7 @@ pub struct BidirectionalSideEffect<LinkMirrorT> {
   remove: NodeIndex,
 }
 
+/// Types of links in a `TypeNode`
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum LinkType {
   Point, // Single NodeIndex

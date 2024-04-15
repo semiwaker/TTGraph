@@ -108,9 +108,8 @@ pub(crate) fn make_link_mirror(
 }
 
 pub(crate) fn make_typed_node(
-  links: &Vec<LinkType>, data: &Vec<(Ident, TypePath)>, groups: &Vec<Vec<Ident>>,
-  name: &Ident, vis: &Visibility, generics: &Generics, source_enum: &Ident,
-  link_mirror: &Ident,
+  links: &[LinkType], data: &[(Ident, TypePath)], groups: &[Vec<Ident>], name: &Ident,
+  vis: &Visibility, generics: &Generics, source_enum: &Ident, link_mirror: &Ident,
 ) -> TokenStream {
   let iterator_ident = format_ident!("{}SourceIterator", name);
   let mut add_source_ops = Vec::new();
@@ -328,22 +327,22 @@ pub(crate) fn make_typed_node(
   for s in links {
     get_link_by_name_vec.push(match s {
       LinkType::Direct(name, camel) => {
-        quote! {std::stringify!(#name) => self.iter_link(Self::LinkMirror::#camel),}
+        quote! {std::stringify!(#name) => self.iter_links(Self::LinkMirror::#camel),}
       },
       LinkType::HSet(name, camel) => {
-        quote! {std::stringify!(#name) => self.iter_link(Self::LinkMirror::#camel),}
+        quote! {std::stringify!(#name) => self.iter_links(Self::LinkMirror::#camel),}
       },
       LinkType::BSet(name, camel) => {
-        quote! {std::stringify!(#name) => self.iter_link(Self::LinkMirror::#camel),}
+        quote! {std::stringify!(#name) => self.iter_links(Self::LinkMirror::#camel),}
       },
       LinkType::Vec(name, camel) => {
-        quote! {std::stringify!(#name) => self.iter_link(Self::LinkMirror::#camel),}
+        quote! {std::stringify!(#name) => self.iter_links(Self::LinkMirror::#camel),}
       },
       _ => quote! {std::stringify!(#name) => Box::new([].into_iter()),},
     });
   }
 
-  let get_link_by_group = make_get_link_by_group(links, groups);
+  let get_links_by_group = make_get_links_by_group(links, groups);
 
   // Generate the static data type vec
   let mut data_type_vec = Vec::new();
@@ -394,10 +393,10 @@ pub(crate) fn make_typed_node(
       type Source = #source_enum;
       type LinkMirror = #link_mirror;
       type Iter = #iterator_ident;
-      fn iter_source(&self) -> Self::Iter {
+      fn iter_sources(&self) -> Self::Iter {
         #iterator_ident::new(&self)
       }
-      fn iter_link(&self, link: Self::LinkMirror) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
+      fn iter_links(&self, link: Self::LinkMirror) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
         match link{
           #(#iter_link_arms)*
         }
@@ -427,13 +426,13 @@ pub(crate) fn make_typed_node(
       fn link_names() -> &'static [&'static str] {
         &[#(#link_name_vec),*]
       }
-      fn get_link_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
+      fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
         match name {
           #(#get_link_by_name_vec)*
           _ => Box::new([].into_iter())
         }
       }
-      #get_link_by_group
+      #get_links_by_group
 
       // fn data_types() -> [std::any::TypeId] {
       //   [#(#data_type_vec),*]

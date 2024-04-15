@@ -101,6 +101,7 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
     &link_mirror_enum_name,
     &node_type_mirror_name,
     &bidirectional_links,
+    &groups,
   );
 
   result.into()
