@@ -88,22 +88,22 @@ mod test_bidirectional {
     let mut graph = Graph::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let gn1 = trans.alloc_node();
-    let gn2 = trans.alloc_node();
-    let gn3 = trans.alloc_node();
-    let pn1 = trans.alloc_node();
-    let pn2 = trans.alloc_node();
-    let pn3 = trans.alloc_node();
-    let tn1 = trans.alloc_node();
-    let tn2 = trans.alloc_node();
-    let tn3 = trans.alloc_node();
-    let tn4 = trans.alloc_node();
-    let bn = trans.alloc_node();
-    let dn1 = trans.alloc_node();
-    let dn2 = trans.alloc_node();
-    let dn3 = trans.alloc_node();
+    let gn1 = trans.alloc();
+    let gn2 = trans.alloc();
+    let gn3 = trans.alloc();
+    let pn1 = trans.alloc();
+    let pn2 = trans.alloc();
+    let pn3 = trans.alloc();
+    let tn1 = trans.alloc();
+    let tn2 = trans.alloc();
+    let tn3 = trans.alloc();
+    let tn4 = trans.alloc();
+    let bn = trans.alloc();
+    let dn1 = trans.alloc();
+    let dn2 = trans.alloc();
+    let dn3 = trans.alloc();
 
-    trans.fill_back_node(
+    trans.fill_back(
       gn1,
       NodeType::GraphNode(GraphNode {
         tos: BTreeSet::from_iter(vec![gn2, gn3]),
@@ -111,7 +111,7 @@ mod test_bidirectional {
         data: 1,
       }),
     );
-    trans.fill_back_node(
+    trans.fill_back(
       gn2,
       NodeType::GraphNode(GraphNode {
         tos: BTreeSet::from_iter(vec![gn2]),
@@ -119,7 +119,7 @@ mod test_bidirectional {
         data: 2,
       }),
     );
-    trans.fill_back_node(
+    trans.fill_back(
       gn3,
       NodeType::GraphNode(GraphNode {
         tos: BTreeSet::new(),
@@ -128,35 +128,29 @@ mod test_bidirectional {
       }),
     );
 
-    trans.fill_back_node(
-      pn1,
-      NodeType::PairNode(PairNode { the_other: NodeIndex::empty() }),
-    );
-    trans.fill_back_node(pn2, NodeType::PairNode(PairNode { the_other: pn1 }));
-    trans.fill_back_node(
-      pn3,
-      NodeType::PairNode(PairNode { the_other: NodeIndex::empty() }),
-    );
+    trans.fill_back(pn1, NodeType::PairNode(PairNode { the_other: NodeIndex::empty() }));
+    trans.fill_back(pn2, NodeType::PairNode(PairNode { the_other: pn1 }));
+    trans.fill_back(pn3, NodeType::PairNode(PairNode { the_other: NodeIndex::empty() }));
 
-    trans.fill_back_node(
+    trans.fill_back(
       tn1,
       NodeType::TreeNode(TreeNode {
         children: HashSet::from_iter([tn2]),
         father: NodeIndex::empty(),
       }),
     );
-    trans.fill_back_node(
+    trans.fill_back(
       tn2,
       NodeType::TreeNode(TreeNode {
         children: HashSet::from_iter([tn4]),
         father: tn1,
       }),
     );
-    trans.fill_back_node(
+    trans.fill_back(
       tn3,
       NodeType::TreeNode(TreeNode { children: HashSet::new(), father: tn1 }),
     );
-    trans.fill_back_node(
+    trans.fill_back(
       tn4,
       NodeType::TreeNode(TreeNode {
         children: HashSet::new(),
@@ -164,15 +158,15 @@ mod test_bidirectional {
       }),
     );
 
-    trans.fill_back_node(
+    trans.fill_back(
       bn,
       NodeType::BoxNode(BoxNode {
         inside: BTreeSet::from_iter([dn1, dn3, tn1, gn1, pn3]),
       }),
     );
-    trans.fill_back_node(dn1, NodeType::DataNode(DataNode { parent: bn, data: 1 }));
-    trans.fill_back_node(dn2, NodeType::DataNode(DataNode { parent: bn, data: 2 }));
-    trans.fill_back_node(
+    trans.fill_back(dn1, NodeType::DataNode(DataNode { parent: bn, data: 1 }));
+    trans.fill_back(dn2, NodeType::DataNode(DataNode { parent: bn, data: 2 }));
+    trans.fill_back(
       dn3,
       NodeType::DataNode(DataNode { parent: NodeIndex::empty(), data: 3 }),
     );
@@ -336,8 +330,8 @@ mod test_bidirectional {
     // bn -> dn1, dn2, dn3, dn4, gn1, tn1, pn3
     // bn2 -> dn5
     let mut trans = Transaction::new(&ctx);
-    let gn4 = trans.alloc_node();
-    trans.fill_back_node(
+    let gn4 = trans.alloc();
+    trans.fill_back(
       gn4,
       NodeType::GraphNode(GraphNode {
         tos: BTreeSet::from_iter([gn2, gn3, gn4]),
@@ -345,14 +339,14 @@ mod test_bidirectional {
         data: 4,
       }),
     );
-    let pn4 = trans.new_node(NodeType::PairNode(PairNode { the_other: pn3 }));
+    let pn4 = trans.insert(NodeType::PairNode(PairNode { the_other: pn3 }));
     let tn5 = trans
-      .new_node(NodeType::TreeNode(TreeNode { children: HashSet::new(), father: tn2 }));
-    let dn5 = trans.alloc_node();
+      .insert(NodeType::TreeNode(TreeNode { children: HashSet::new(), father: tn2 }));
+    let dn5 = trans.alloc();
     let bn2 =
-      trans.new_node(NodeType::BoxNode(BoxNode { inside: BTreeSet::from_iter([dn5]) }));
-    let dn4 = trans.new_node(NodeType::DataNode(DataNode { parent: bn, data: 4 }));
-    trans.fill_back_node(
+      trans.insert(NodeType::BoxNode(BoxNode { inside: BTreeSet::from_iter([dn5]) }));
+    let dn4 = trans.insert(NodeType::DataNode(DataNode { parent: bn, data: 4 }));
+    trans.fill_back(
       dn5,
       NodeType::DataNode(DataNode { parent: NodeIndex::empty(), data: 5 }),
     );
@@ -494,7 +488,7 @@ mod test_bidirectional {
     // bn2 -> dn2, dn3, dn5, gn1
     let mut trans = Transaction::new(&ctx);
 
-    let gn4 = trans.alloc_node();
+    let gn4 = trans.alloc();
     mut_node!(trans, NodeType::GraphNode, gn1, x, {
       x.tos.remove(&gn3);
       x.froms.remove(&gn3);
@@ -509,7 +503,7 @@ mod test_bidirectional {
         ..x
       }
     });
-    trans.fill_back_node(
+    trans.fill_back(
       gn4,
       NodeType::GraphNode(GraphNode {
         tos: BTreeSet::from_iter([gn2, gn4]),
@@ -518,7 +512,7 @@ mod test_bidirectional {
       }),
     );
 
-    let pn4 = trans.new_node(NodeType::PairNode(PairNode { the_other: pn2 }));
+    let pn4 = trans.insert(NodeType::PairNode(PairNode { the_other: pn2 }));
     mut_node!(trans, NodeType::PairNode, pn1, x, {
       x.the_other = NodeIndex::empty();
     });
@@ -526,7 +520,7 @@ mod test_bidirectional {
       x.the_other = NodeIndex::empty();
     });
 
-    let tn5 = trans.new_node(NodeType::TreeNode(TreeNode {
+    let tn5 = trans.insert(NodeType::TreeNode(TreeNode {
       children: HashSet::from_iter([tn2, tn4]),
       father: tn1,
     }));
@@ -538,22 +532,22 @@ mod test_bidirectional {
       x.father = tn5;
     });
 
-    let dn4 = trans
-      .new_node(NodeType::DataNode(DataNode { parent: NodeIndex::empty(), data: 4 }));
+    let dn4 =
+      trans.insert(NodeType::DataNode(DataNode { parent: NodeIndex::empty(), data: 4 }));
     mut_node!(trans, NodeType::BoxNode, bn, x, {
       x.inside.remove(&dn2);
       x.inside.remove(&dn3);
       x.inside.remove(&gn1);
       x.inside.insert(dn4);
     });
-    let bn2 = trans.new_node(NodeType::BoxNode(BoxNode {
+    let bn2 = trans.insert(NodeType::BoxNode(BoxNode {
       inside: BTreeSet::from_iter([dn2, dn3, gn1]),
     }));
     update_node!(trans, NodeType::DataNode, dn2, x, { DataNode { parent: bn2, ..x } });
     mut_node!(trans, NodeType::DataNode, dn3, x, {
       x.parent = NodeIndex::empty();
     });
-    let dn5 = trans.new_node(NodeType::DataNode(DataNode { parent: bn2, data: 5 }));
+    let dn5 = trans.insert(NodeType::DataNode(DataNode { parent: bn2, data: 5 }));
 
     graph.commit(trans);
     {
@@ -686,10 +680,10 @@ mod test_bidirectional {
     // tn1 -> tn3
     // bn -> dn1, dn2, tn1, gn1, pn3
     let mut trans = Transaction::new(&ctx);
-    trans.remove_node(gn3);
-    trans.remove_node(pn2);
-    trans.remove_node(tn2);
-    trans.remove_node(dn3);
+    trans.remove(gn3);
+    trans.remove(pn2);
+    trans.remove(tn2);
+    trans.remove(dn3);
 
     graph.commit(trans);
 
@@ -813,7 +807,7 @@ mod test_bidirectional {
     trans.redirect_links(gn2, gn3);
     trans.redirect_links(pn2, pn3);
     trans.redirect_links(tn2, tn3);
-    let bn2 = trans.new_node(NodeType::BoxNode(BoxNode { inside: BTreeSet::new() }));
+    let bn2 = trans.insert(NodeType::BoxNode(BoxNode { inside: BTreeSet::new() }));
     trans.redirect_links(bn, bn2);
 
     graph.commit(trans);

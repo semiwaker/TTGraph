@@ -40,19 +40,19 @@ mod tests_typed {
     let context = Context::new();
     let mut graph = Graph::<MyNodeEnum>::new(&context);
     let mut trans = Transaction::new(&context);
-    let n = trans.new_node(MyNodeEnum::Empty(NodeEmpty { x: 0 }));
+    let n = trans.insert(MyNodeEnum::Empty(NodeEmpty { x: 0 }));
     graph.commit(trans);
     for (idx, n) in iter_nodes!(graph, MyNodeEnum::Empty) {
       eprintln!("{:?} {:?}", idx, n);
     }
 
     let mut trans = Transaction::new(&context);
-    let b = trans.alloc_node();
-    let a = trans.new_node(MyNodeEnum::A(NodeA { to: b, name: "A".to_string() }));
-    trans.fill_back_node(b, MyNodeEnum::B(NodeB { a, x: n, data1: 3 }));
+    let b = trans.alloc();
+    let a = trans.insert(MyNodeEnum::A(NodeA { to: b, name: "A".to_string() }));
+    trans.fill_back(b, MyNodeEnum::B(NodeB { a, x: n, data1: 3 }));
 
     graph.commit(trans);
-    for (idx, n) in graph.iter_nodes() {
+    for (idx, n) in graph.iter() {
       eprintln!("{:?} {:?}", idx, n);
     }
     for (idx, n) in iter_nodes!(graph, MyNodeEnum::A) {
@@ -83,7 +83,7 @@ mod tests_typed {
       "{:?}",
       get_node!(graph, MyNodeEnum::B, b).unwrap().data_ref_by_name::<usize>("data1")
     );
-    println!("{:?}", graph.get_node(b).unwrap().data_ref_by_name::<usize>("data1"));
+    println!("{:?}", graph.get(b).unwrap().data_ref_by_name::<usize>("data1"));
     // for (idx, n) in Edge::iter_by_type(graph) {}
   }
 
@@ -105,18 +105,17 @@ mod tests_typed {
     let mut graph = Graph::<TestNode>::new(&context);
     let mut trans = Transaction::new(&context);
 
-    let a = trans.alloc_node();
-    let b = trans.alloc_node();
-    let c = trans.alloc_node();
-    let d = trans.new_node(TestNode::CNode(CNode { tos: BTreeSet::new() }));
-    trans.fill_back_node(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
-    trans.fill_back_node(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
-    trans
-      .fill_back_node(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
+    let a = trans.alloc();
+    let b = trans.alloc();
+    let c = trans.alloc();
+    let d = trans.insert(TestNode::CNode(CNode { tos: BTreeSet::new() }));
+    trans.fill_back(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
+    trans.fill_back(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
+    trans.fill_back(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
 
     graph.commit(trans);
 
-    println!("{}", graph);
+    println!("{:?}", graph);
     trans = Transaction::new(&context);
 
     trans.redirect_links(c, b);
@@ -125,7 +124,7 @@ mod tests_typed {
 
     graph.commit(trans);
 
-    println!("{}", graph);
+    println!("{:?}", graph);
   }
 
   #[test]
@@ -134,13 +133,12 @@ mod tests_typed {
     let mut graph = Graph::<TestNode>::new(&context);
     let mut trans = Transaction::<TestNode>::new(&context);
 
-    let a = trans.alloc_node();
-    let b = trans.alloc_node();
-    let c = trans.alloc_node();
-    let d = trans.new_node(TestNode::CNode(CNode { tos: BTreeSet::new() }));
-    trans.fill_back_node(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
-    trans.fill_back_node(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
-    trans
-      .fill_back_node(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
+    let a = trans.alloc();
+    let b = trans.alloc();
+    let c = trans.alloc();
+    let d = trans.insert(TestNode::CNode(CNode { tos: BTreeSet::new() }));
+    trans.fill_back(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
+    trans.fill_back(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
+    trans.fill_back(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
   }
 }

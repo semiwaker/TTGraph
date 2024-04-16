@@ -21,7 +21,7 @@
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
 ///
-/// let x = trans.new_node(MyNodeEnum::A(NodeA{ a: 1 }));
+/// let x = trans.insert(MyNodeEnum::A(NodeA{ a: 1 }));
 /// graph.commit(trans);
 ///
 /// // a: Option<&NodeA>
@@ -32,7 +32,7 @@
 #[macro_export]
 macro_rules! get_node {
   ($graph: expr, $var: path, $idx: expr) => {
-    if let Some($var(x)) = $graph.get_node($idx) {
+    if let Some($var(x)) = $graph.get($idx) {
       Some(x)
     } else {
       None
@@ -66,9 +66,9 @@ macro_rules! get_node {
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
 ///
-/// trans.new_node(MyNodeEnum::A(NodeA{ a: 1 }));
-/// trans.new_node(MyNodeEnum::A(NodeA{ a: 2 }));
-/// trans.new_node(MyNodeEnum::B(NodeB{ b: 0 }));
+/// trans.insert(MyNodeEnum::A(NodeA{ a: 1 }));
+/// trans.insert(MyNodeEnum::A(NodeA{ a: 2 }));
+/// trans.insert(MyNodeEnum::B(NodeB{ b: 0 }));
 /// graph.commit(trans);
 ///
 /// let iterator = iter_nodes!(graph, MyNodeEnum::A);
@@ -80,7 +80,7 @@ macro_rules! get_node {
 #[macro_export]
 macro_rules! iter_nodes {
   ($graph: expr, $var: path) => {
-    $graph.iter_nodes().filter_map(
+    $graph.iter().filter_map(
       |(idx, node)| {
         if let $var(x) = node {
           Some((idx, x))
@@ -92,7 +92,7 @@ macro_rules! iter_nodes {
   };
 }
 
-/// Use the [`mut_node`](crate::Transaction::<T>::mut_node) method of the transaction, assume the node is $var variant of the NodeEnum.
+/// Use the [`mutate`](crate::Transaction::mutate) method of the transaction, assume the node is $var variant of the NodeEnum.
 /// Panics if the enum does not match.
 ///
 /// # Example
@@ -114,7 +114,7 @@ macro_rules! iter_nodes {
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
 ///
-/// let id = trans.new_node(MyNodeEnum::A(NodeA{ a: 1 }));
+/// let id = trans.insert(MyNodeEnum::A(NodeA{ a: 1 }));
 /// graph.commit(trans);
 ///
 /// trans = Transaction::new(&ctx);
@@ -131,7 +131,7 @@ macro_rules! iter_nodes {
 #[macro_export]
 macro_rules! mut_node {
   ($transaction: expr, $var: path, $idx: expr, $node: ident, $func: block) => {
-    $transaction.mut_node($idx, |x| {
+    $transaction.mutate($idx, |x| {
       if let $var($node) = x {
         $func;
       } else {
@@ -141,7 +141,7 @@ macro_rules! mut_node {
   };
 }
 
-/// Use the [`update_node`](crate::Transaction::<T>::update_node) method of the transaction, assume the node is $var variant of the NodeEnum.
+/// Use the [`update`](crate::Transaction::update) method of the transaction, assume the node is $var variant of the NodeEnum.
 /// Panics if the enum does not match.
 ///
 /// # Example
@@ -163,7 +163,7 @@ macro_rules! mut_node {
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
 ///
-/// let id = trans.new_node(MyNodeEnum::A(NodeA{ a: 1 }));
+/// let id = trans.insert(MyNodeEnum::A(NodeA{ a: 1 }));
 /// graph.commit(trans);
 ///
 /// trans = Transaction::new(&ctx);
@@ -182,7 +182,7 @@ macro_rules! mut_node {
 #[macro_export]
 macro_rules! update_node {
   ($transaction: expr, $var: path, $idx: expr, $node: ident, $func: block) => {
-    $transaction.update_node($idx, |x| {
+    $transaction.update($idx, |x| {
       if let $var($node) = x {
         $var($func)
       } else {

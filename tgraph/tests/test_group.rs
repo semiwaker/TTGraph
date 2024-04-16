@@ -46,11 +46,11 @@ mod test_bidirectional {
     let mut graph = Graph::<Nodes>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let x1 = trans.new_node(Nodes::A(Node::default()));
-    let x2 = trans.new_node(Nodes::A(Node::default()));
-    let x3 = trans.new_node(Nodes::A(Node::default()));
-    let x4 = trans.new_node(Nodes::A(Node::default()));
-    let x5 = trans.new_node(Nodes::A(Node {
+    let x1 = trans.insert(Nodes::A(Node::default()));
+    let x2 = trans.insert(Nodes::A(Node::default()));
+    let x3 = trans.insert(Nodes::A(Node::default()));
+    let x4 = trans.insert(Nodes::A(Node::default()));
+    let x5 = trans.insert(Nodes::A(Node {
       a: x1,
       b: vec![x2, x3],
       c: x4,
@@ -60,7 +60,7 @@ mod test_bidirectional {
 
     graph.commit(trans);
 
-    let node = graph.get_node(x5).unwrap();
+    let node = graph.get(x5).unwrap();
     assert_eq!(node.get_links_by_group("group1"), vec![x1, x2, x3]);
     assert_eq!(node.get_links_by_group("group2"), vec![x4, x1, x3]);
     assert_eq!(node.get_links_by_group("x"), vec![x1, x2, x3, x1, x3]);
@@ -106,10 +106,10 @@ mod test_bidirectional {
     let mut graph = Graph::<MultiNodes>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.new_node(MultiNodes::A(NodeA { a: 1 }));
-    let b = trans.new_node(MultiNodes::B(NodeB { b: 2 }));
-    let c = trans.new_node(MultiNodes::C(NodeC { c: 3 }));
-    let d = trans.new_node(MultiNodes::D(NodeD { d: 4 }));
+    let a = trans.insert(MultiNodes::A(NodeA { a: 1 }));
+    let b = trans.insert(MultiNodes::B(NodeB { b: 2 }));
+    let c = trans.insert(MultiNodes::C(NodeC { c: 3 }));
+    let d = trans.insert(MultiNodes::D(NodeD { d: 4 }));
 
     graph.commit(trans);
 

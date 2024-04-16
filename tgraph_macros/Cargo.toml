@@ -1,7 +1,14 @@
 [package]
 name = "tgraph_macros"
-version = "0.1.0"
-edition = "2021"
+description = "Proc-macros for TGraph"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 proc-macro-error = "1.0"

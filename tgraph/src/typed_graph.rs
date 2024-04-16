@@ -4,13 +4,13 @@
 
 use std::any::Any;
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::sync::Arc;
 
 use uuid::Uuid;
 
-use crate::arena::*;
+use crate::arena::{self, Arena, ArenaIndex, IdDistributer};
 
 pub mod debug;
 pub mod display;
@@ -60,6 +60,16 @@ impl ArenaIndex for NodeIndex {
   }
 }
 
+impl Display for NodeIndex {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    if self.is_empty() {
+      write!(f, "empty")
+    } else {
+      write!(f, "{}", self.0)
+    }
+  }
+}
+
 /// A graph with typed nodes
 /// The graph can only by modified by commiting a transaction, which avoids mutable borrow of the graph
 ///
@@ -67,7 +77,7 @@ impl ArenaIndex for NodeIndex {
 ///
 /// ```rust
 /// use tgraph::*;
-/// use std::collections::BTreeSet;
+/// # use std::collections::BTreeSet;
 ///
 /// #[derive(TypedNode)]
 /// struct NodeA{
@@ -97,7 +107,7 @@ impl ArenaIndex for NodeIndex {
 #[derive(Clone)]
 pub struct Graph<NodeT: NodeEnum> {
   ctx_id: Uuid,
-  nodes: Arena<NodeT, NodeIndex>,
+  nodes: Arena<NodeIndex, NodeT>,
   back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>>,
 }
 
@@ -130,22 +140,22 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
-  /// let idx = trans.new_node(Node::A(NodeA{
+  /// let idx = trans.insert(Node::A(NodeA{
   ///   data: 1
   /// }));
   /// graph.commit(trans);
   ///
   /// // node: Option<&Node>
-  /// let node = graph.get_node(idx);
+  /// let node = graph.get(idx);
   /// if let Some(Node::A(node)) = node {
   ///   assert_eq!(node.data, 1);
   /// } else {
   ///   panic!();
   /// }
   ///
-  /// assert!(graph.get_node(NodeIndex::empty()).is_none());
+  /// assert!(graph.get(NodeIndex::empty()).is_none());
   /// ````
-  pub fn get_node(&self, idx: NodeIndex) -> Option<&NodeT> {
+  pub fn get(&self, idx: NodeIndex) -> Option<&NodeT> {
     self.nodes.get(idx)
   }
 
@@ -175,13 +185,13 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   ///
-  /// trans.new_node(Node::A(NodeA{ a: 1 }));
-  /// trans.new_node(Node::A(NodeA{ a: 2 }));
-  /// trans.new_node(Node::B(NodeB{ b: 0 }));
+  /// trans.insert(Node::A(NodeA{ a: 1 }));
+  /// trans.insert(Node::A(NodeA{ a: 2 }));
+  /// trans.insert(Node::B(NodeB{ b: 0 }));
   /// graph.commit(trans);
   ///
   /// // iterator.next() returns Option<(NodeIndex, &Node)>
-  /// let iterator = graph.iter_nodes();
+  /// let iterator = graph.iter();
   /// for (i, (_, node)) in (1..3).zip(iterator) {
   ///   if let Node::A(a) = node {
   ///     assert_eq!(i, a.a);
@@ -190,8 +200,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///   }
   /// }
   /// ```
-  pub fn iter_nodes(&self) -> impl Iterator<Item = (NodeIndex, &NodeT)> {
-    self.nodes.iter().map(|(x, n)| (*x, n))
+  pub fn iter(&self) -> Iter<'_, NodeT> {
+    self.nodes.iter()
   }
 
   /// Iterate all nodes within the named group
@@ -235,10 +245,10 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///  let ctx = Context::new();
   ///  let mut graph = Graph::<MultiNodes>::new(&ctx);
   ///  let mut trans = Transaction::new(&ctx);
-  ///  let a = trans.new_node(MultiNodes::A(NodeA { a: 1 }));
-  ///  let b = trans.new_node(MultiNodes::B(NodeB { b: 2 }));
-  ///  let c = trans.new_node(MultiNodes::C(NodeC { c: 3 }));
-  ///  let d = trans.new_node(MultiNodes::D(NodeD { d: 4 }));
+  ///  let a = trans.insert(MultiNodes::A(NodeA { a: 1 }));
+  ///  let b = trans.insert(MultiNodes::B(NodeB { b: 2 }));
+  ///  let c = trans.insert(MultiNodes::C(NodeC { c: 3 }));
+  ///  let d = trans.insert(MultiNodes::D(NodeD { d: 4 }));
   ///  graph.commit(trans);
   ///
   ///  assert_eq!(Vec::from_iter(graph.iter_group("first").map(|(x, _)| x)), vec![a, b]);
@@ -250,7 +260,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   pub fn iter_group(
     &self, name: &'static str,
   ) -> impl Iterator<Item = (NodeIndex, &NodeT)> {
-    self.iter_nodes().filter(move |(_, n)| n.in_group(name))
+    self.iter().filter(move |(_, n)| n.in_group(name))
   }
 
   /// Get the number of nodes in a graph
@@ -271,9 +281,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// assert_eq!(graph.len(), 0);
   /// let mut trans = Transaction::new(&ctx);
-  /// trans.new_node(Node::A(NodeA{data: 1}));
-  /// trans.new_node(Node::A(NodeA{data: 1}));
-  /// trans.new_node(Node::A(NodeA{data: 1}));
+  /// trans.insert(Node::A(NodeA{data: 1}));
+  /// trans.insert(Node::A(NodeA{data: 1}));
+  /// trans.insert(Node::A(NodeA{data: 1}));
   /// graph.commit(trans);
   /// assert_eq!(graph.len(), 3);
   /// ```
@@ -281,7 +291,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     self.nodes.len()
   }
 
-  /// Check if the graph has no node, equals to `graph.len() == 0`
+  /// Check if the graph has no node
   pub fn is_empty(&self) -> bool {
     self.len() == 0
   }
@@ -295,6 +305,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// + Redirect all nodes
   /// + Remove nodes
   /// + Add/Remove links due to bidirectional declaration
+  /// # Panics
+  /// Panic if the transaction and the graph have different context
   /// # Example
   /// ```
   /// use tgraph::*;
@@ -311,7 +323,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
-  /// trans.new_node(Node::A(NodeA{data: 1}));
+  /// trans.insert(Node::A(NodeA{data: 1}));
   /// graph.commit(trans);
   /// ```
   pub fn commit(&mut self, t: Transaction<NodeT>) {
@@ -342,7 +354,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// Switch the context and relabel the node ids.
   /// # Usecase:
   /// + Useful when there are a lot of removed [`NodeIndex`], and after context switching the indexes will be more concise.
-  /// + Merge two graphs with different context. See [`merge_graph`](Transaction::merge_graph) for example.
+  /// + Merge two graphs with different context. See [`merge`](Transaction::merge) for example.
   /// # Warning:
   /// + Please ensure there is no uncommitted transactions!
   /// + [`NodeIndex`] pointing to this graph is useless after context switching!
@@ -378,28 +390,28 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     let mut back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>> =
       BTreeMap::new();
     for (x, n) in &self.nodes {
-      back_links.entry(*x).or_default();
+      back_links.entry(x).or_default();
       for (y, s) in n.iter_sources() {
-        back_links.entry(y).or_default().insert((*x, s));
+        back_links.entry(y).or_default().insert((x, s));
         let links = self
           .back_links
           .get(&y)
           .unwrap_or_else(|| panic!("Node {} have no backlink!", x.0));
-        assert!(links.contains(&(*x, s)));
+        assert!(links.contains(&(x, s)));
       }
     }
     assert_eq!(back_links, self.back_links);
   }
 
   fn merge_nodes(
-    &mut self, nodes: Arena<NodeT, NodeIndex>, bd: &mut BidirectionLinkContainer<NodeT>,
+    &mut self, nodes: Arena<NodeIndex, NodeT>, bd: &mut BidirectionLinkContainer<NodeT>,
   ) {
     for (x, n) in &nodes {
-      self.add_back_links(*x, n);
+      self.add_back_links(x, n);
     }
     for (id, node) in &nodes {
       for (ys, lms) in node.get_bidiretional_links() {
-        bd.add(*id, ys, &lms);
+        bd.add(id, ys, &lms);
       }
     }
     self.nodes.merge(nodes);
@@ -617,8 +629,11 @@ impl<NodeT: NodeEnum> Default for BidirectionLinkContainer<NodeT> {
   }
 }
 
+type Iter<'a, NodeT> = arena::Iter<'a, NodeIndex, NodeT>;
+type IntoIter<NodeT> = arena::IntoIter<NodeIndex, NodeT>;
+
 impl<T: NodeEnum> IntoIterator for Graph<T> {
-  type IntoIter = IntoIter<NodeIndex, T>;
+  type IntoIter = IntoIter<T>;
   type Item = (NodeIndex, T);
 
   fn into_iter(self) -> Self::IntoIter {
@@ -626,9 +641,9 @@ impl<T: NodeEnum> IntoIterator for Graph<T> {
   }
 }
 
-/// Type alias for [`mut_node`](Transaction::mut_node), intented to be used in macros
+/// Type alias to be used in [`mutate`](Transaction::mutate), intented to be used in macros
 pub type MutFunc<'a, T> = Box<dyn FnOnce(&mut T) + 'a>;
-/// Type alias for [`update_node`](Transaction::update_node), intented to be used in macros
+/// Type alias to be used in [`update`](Transaction::update), intented to be used in macros
 pub type UpdateFunc<'a, T> = Box<dyn FnOnce(T) -> T + 'a>;
 
 /// Context for typed graph
@@ -640,11 +655,6 @@ pub struct Context {
 }
 impl Context {
   /// Create a new context
-  /// # Example
-  /// ```
-  /// use tgraph::Context;
-  /// let ctx = Context::new();
-  /// ```
   pub fn new() -> Context {
     Context {
       id: Uuid::new_v4(),
@@ -653,7 +663,6 @@ impl Context {
   }
 }
 impl Default for Context {
-  /// Same as [`new()`](Context::new)
   fn default() -> Self {
     Self::new()
   }
@@ -667,7 +676,7 @@ impl Clone for Context {
   }
 }
 
-// A trait intended to be used in macros
+/// A trait intended to be used in macros
 pub trait SourceIterator<T: TypedNode>:
   Iterator<Item = (NodeIndex, Self::Source)>
 {

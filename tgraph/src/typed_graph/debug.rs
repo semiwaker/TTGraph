@@ -8,7 +8,7 @@ impl<T: NodeEnum + Debug> Debug for Graph<T> {
     writeln!(f, "Graph {{")?;
     writeln!(f, "  ctx_id = {:?},", self.ctx_id)?;
     writeln!(f, "  nodes = [")?;
-    for (i, n) in self.iter_nodes() {
+    for (i, n) in self.iter() {
       writeln!(f, "    {:?}: {:?}", i, n)?;
     }
     writeln!(f, "  ],")?;

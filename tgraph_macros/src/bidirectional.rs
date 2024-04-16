@@ -114,6 +114,7 @@ pub(crate) fn make_bidirectional_link(
         Self::LinkMirrorEnum::#var(l) => {
           match l {
             #(#arms)*
+            _ => vec![],
           }
         }
       });
