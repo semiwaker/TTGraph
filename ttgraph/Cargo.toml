@@ -1,6 +1,6 @@
 [package]
 name = "ttgraph"
-version= "0.1.0"
+version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
 description.workspace = true
@@ -14,4 +14,4 @@ categories.workspace = true
 [dependencies]
 visible = "0.0.1"
 uuid = { version = "1.4.1", features = ["v4", "fast-rng"] }
-ttgraph_macros = { path = "../ttgraph_macros" }
+ttgraph_macros = { version = "0.1.0", path = "../ttgraph_macros" }
