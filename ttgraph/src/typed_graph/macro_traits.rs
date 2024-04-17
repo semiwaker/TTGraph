@@ -6,7 +6,7 @@ use super::*;
 /// Intented to be automatically derived
 /// # Example
 /// ```rust
-/// use tgraph::*;
+/// use ttgraph::*;
 /// use std::collections::{HashSet, BTreeSet};
 /// #[derive(TypedNode)]
 /// struct SomeNode {
@@ -69,7 +69,7 @@ pub trait TypedNode: Sized {
 /// Intented to be automatically generated
 /// # Example
 /// ```rust
-/// use tgraph::*;
+/// use ttgraph::*;
 /// #[derive(TypedNode)]
 /// struct A{
 ///   a: NodeIndex,

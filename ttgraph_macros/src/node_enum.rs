@@ -97,10 +97,10 @@ pub(crate) fn make_node_enum(
       Self::#ident(x) => {
         if let Self::SourceEnum::#ident(src) = source {
           let (removed, added) = <#ty as TypedNode>::modify_link(x, src, old_idx, new_idx);
-          tgraph::BidirectionalSideEffect {
+          ttgraph::BidirectionalSideEffect {
             link_mirrors: self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#ident(src.to_link_mirror())),
-            add: if (added) {new_idx} else {tgraph::NodeIndex::empty()},
-            remove: if (removed) {old_idx} else {tgraph::NodeIndex::empty()},
+            add: if (added) {new_idx} else {ttgraph::NodeIndex::empty()},
+            remove: if (removed) {old_idx} else {ttgraph::NodeIndex::empty()},
           }
         } else {
           panic!("Unmatched node type and source type!")
@@ -199,17 +199,17 @@ pub(crate) fn make_node_enum(
           #(#iter_link_arms)*
         }
       }
-      fn modify_link(&mut self, source: Self::SourceEnum, old_idx: tgraph::NodeIndex, new_idx: tgraph::NodeIndex) -> tgraph::BidirectionalSideEffect<Self::LinkMirrorEnum> {
+      fn modify_link(&mut self, source: Self::SourceEnum, old_idx: ttgraph::NodeIndex, new_idx: ttgraph::NodeIndex) -> ttgraph::BidirectionalSideEffect<Self::LinkMirrorEnum> {
         match self{
           #(#mod_arms)*
         }
       }
-      fn add_link(&mut self, link: Self::LinkMirrorEnum, target: tgraph::NodeIndex) -> bool {
+      fn add_link(&mut self, link: Self::LinkMirrorEnum, target: ttgraph::NodeIndex) -> bool {
         match self{
           #(#add_link_arms)*
         }
       }
-      fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: tgraph::NodeIndex) -> bool {
+      fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: ttgraph::NodeIndex) -> bool {
         match self{
           #(#remove_link_arms)*
         }
@@ -219,12 +219,12 @@ pub(crate) fn make_node_enum(
           #(#check_link_arms)*
         }
       }
-      fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
+      fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = ttgraph::NodeIndex> + '_> {
         match self{
           #(#get_link_by_name_arms)*
         }
       }
-      fn get_links_by_group(&self, name: &'static str) -> Vec<tgraph::NodeIndex>{
+      fn get_links_by_group(&self, name: &'static str) -> Vec<ttgraph::NodeIndex>{
         match self{
           #(#get_link_by_group_arms)*
         }

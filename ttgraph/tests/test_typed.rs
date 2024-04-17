@@ -6,7 +6,7 @@
 mod tests_typed {
   use std::collections::BTreeSet;
 
-  use tgraph::*;
+  use ttgraph::*;
 
   #[derive(TypedNode, Debug)]
   struct NodeA {

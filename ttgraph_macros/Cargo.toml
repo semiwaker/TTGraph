@@ -1,6 +1,6 @@
 [package]
-name = "tgraph_macros"
-description = "Proc-macros for TGraph"
+name = "ttgraph_macros"
+description = "Proc-macros for TTGraph"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

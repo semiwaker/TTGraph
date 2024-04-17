@@ -7,7 +7,7 @@ mod test_bidirectional {
   use std::collections::{BTreeSet, HashSet};
   use std::hash::Hash;
 
-  use tgraph::*;
+  use ttgraph::*;
 
   // Test set to set
   #[derive(TypedNode, Debug, Clone)]

@@ -45,10 +45,7 @@ impl<K: ArenaIndex, V> Arena<K, V> {
   }
 
   pub fn fill_back(&mut self, i: K, item: V) {
-    assert!(
-      self.container.insert(i, item).is_none(),
-      "tgraph::arena::fill_back: filled an illegal index!"
-    )
+    assert!(self.container.insert(i, item).is_none(), "Filled an illegal index!")
   }
 
   pub fn remove(&mut self, i: K) -> Option<V> {

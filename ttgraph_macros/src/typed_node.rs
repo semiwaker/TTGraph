@@ -260,7 +260,7 @@ pub(crate) fn make_typed_node(
             false
           } else {
             if self.#ident == target {
-              self.#ident = tgraph::NodeIndex::empty();
+              self.#ident = ttgraph::NodeIndex::empty();
               true
             } else {
               false
@@ -291,10 +291,10 @@ pub(crate) fn make_typed_node(
   let mut link_type_vec = Vec::new();
   for s in links {
     match s {
-      LinkType::Direct(..) => link_type_vec.push(quote! {tgraph::LinkType::Point}),
-      LinkType::HSet(..) => link_type_vec.push(quote! {tgraph::LinkType::HSet}),
-      LinkType::BSet(..) => link_type_vec.push(quote! {tgraph::LinkType::BSet}),
-      LinkType::Vec(..) => link_type_vec.push(quote! {tgraph::LinkType::Vec}),
+      LinkType::Direct(..) => link_type_vec.push(quote! {ttgraph::LinkType::Point}),
+      LinkType::HSet(..) => link_type_vec.push(quote! {ttgraph::LinkType::HSet}),
+      LinkType::BSet(..) => link_type_vec.push(quote! {ttgraph::LinkType::BSet}),
+      LinkType::Vec(..) => link_type_vec.push(quote! {ttgraph::LinkType::Vec}),
       _ => {},
     }
   }
@@ -369,7 +369,7 @@ pub(crate) fn make_typed_node(
       sources: Vec<(NodeIndex, #source_enum)>,
       cur: usize
     }
-    impl #impl_generics tgraph::SourceIterator<#name #ty_generics> for #iterator_ident #where_clause{
+    impl #impl_generics ttgraph::SourceIterator<#name #ty_generics> for #iterator_ident #where_clause{
       type Source = #source_enum;
       fn new(node: &#name #ty_generics) -> Self{
         let mut sources = Vec::new();
@@ -389,35 +389,35 @@ pub(crate) fn make_typed_node(
         }
       }
     }
-    impl #impl_generics tgraph::TypedNode for #name #ty_generics #where_clause {
+    impl #impl_generics ttgraph::TypedNode for #name #ty_generics #where_clause {
       type Source = #source_enum;
       type LinkMirror = #link_mirror;
       type Iter = #iterator_ident;
       fn iter_sources(&self) -> Self::Iter {
         #iterator_ident::new(&self)
       }
-      fn iter_links(&self, link: Self::LinkMirror) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
+      fn iter_links(&self, link: Self::LinkMirror) -> Box<dyn std::iter::Iterator<Item = ttgraph::NodeIndex> + '_> {
         match link{
           #(#iter_link_arms)*
         }
       }
-      fn modify_link(&mut self, source: Self::Source, old_idx:tgraph::NodeIndex, new_idx: tgraph::NodeIndex) -> (bool, bool) {
+      fn modify_link(&mut self, source: Self::Source, old_idx:ttgraph::NodeIndex, new_idx: ttgraph::NodeIndex) -> (bool, bool) {
         match source{
           #(#modify_arms)*
         }
       }
-      fn add_link(&mut self, link: Self::LinkMirror, target: tgraph::NodeIndex) -> bool {
+      fn add_link(&mut self, link: Self::LinkMirror, target: ttgraph::NodeIndex) -> bool {
         match link{
           #(#add_link_arms)*
         }
       }
-      fn remove_link(&mut self, link: Self::LinkMirror, target: tgraph::NodeIndex) -> bool {
+      fn remove_link(&mut self, link: Self::LinkMirror, target: ttgraph::NodeIndex) -> bool {
         match link{
           #(#remove_link_arms)*
         }
       }
 
-      fn link_types() -> &'static [tgraph::LinkType] {
+      fn link_types() -> &'static [ttgraph::LinkType] {
         &[#(#link_type_vec),*]
       }
       fn link_mirrors() -> &'static [Self::LinkMirror] {
@@ -426,7 +426,7 @@ pub(crate) fn make_typed_node(
       fn link_names() -> &'static [&'static str] {
         &[#(#link_name_vec),*]
       }
-      fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = tgraph::NodeIndex> + '_> {
+      fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = ttgraph::NodeIndex> + '_> {
         match name {
           #(#get_link_by_name_vec)*
           _ => Box::new([].into_iter())

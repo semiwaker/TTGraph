@@ -23,7 +23,7 @@ pub use transaction::Transaction;
 
 pub mod macros;
 // pub use macros::*;
-pub use tgraph_macros::*;
+pub use ttgraph_macros::*;
 
 /// The index of a node, which implements [`Copy`].
 /// Note: The index is very independent to the [`Graph`], which does not check if it is realy pointing to a node in the graph.
@@ -34,7 +34,7 @@ impl NodeIndex {
   /// Make an empty index
   /// # Example
   /// ```
-  /// use tgraph::NodeIndex;
+  /// use ttgraph::NodeIndex;
   /// let a = NodeIndex::empty();
   /// assert_eq!(a, NodeIndex::empty());
   /// ````
@@ -45,7 +45,7 @@ impl NodeIndex {
   /// Check if the index is empty
   ///  /// # Example
   /// ```
-  /// use tgraph::NodeIndex;
+  /// use ttgraph::NodeIndex;
   /// let a = NodeIndex::empty();
   /// assert!(a.is_empty());
   /// ````
@@ -76,7 +76,7 @@ impl Display for NodeIndex {
 /// # Example:
 ///
 /// ```rust
-/// use tgraph::*;
+/// use ttgraph::*;
 /// # use std::collections::BTreeSet;
 ///
 /// #[derive(TypedNode)]
@@ -124,7 +124,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// Get the reference of a node. For convinience, if the type of the node is previously known, use [`get_node!()`](crate::get_node!) instead.
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   ///
   /// #[derive(TypedNode)]
   /// struct NodeA{
@@ -163,7 +163,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// If only a type of node is wanted, use [`iter_nodes!`](`crate::iter_nodes!`) instead.
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   ///
   /// #[derive(TypedNode)]
   /// struct NodeA{
@@ -207,7 +207,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// Iterate all nodes within the named group
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode, Debug)]
   /// struct NodeA {
   ///   a: usize,
@@ -266,7 +266,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// Get the number of nodes in a graph
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -309,7 +309,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// Panic if the transaction and the graph have different context
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,

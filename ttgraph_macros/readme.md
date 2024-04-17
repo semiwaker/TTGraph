@@ -1,4 +1,4 @@
-# TGraph macro
+# TTgraph macro
 
 Explanation for some of the macros.
 
@@ -64,7 +64,7 @@ struct MyNodeSourceIterator{
   sources: Vec<(NodeIndex, NodeNameSource)>,
   cur: usize
 }
-impl tgraph::typed_graph::SourceIterator<NodeName> for NodeNameIterator{ 
+impl ttgraph::typed_graph::SourceIterator<NodeName> for NodeNameIterator{ 
   // ...
 }
 
@@ -74,7 +74,7 @@ impl std::iter::Iterator for MyNodeIterator { }
 ### TypedNode trait
 
 ```rust
-impl tgraph::typed_graph::TypedNode for MyNode {
+impl ttgraph::typed_graph::TypedNode for MyNode {
   type Source = MyNodeSource;
   type LinkMirror = MyNodeLinkMirror;
   type Iter = MyNodeSourceIterator;
@@ -92,14 +92,14 @@ impl tgraph::typed_graph::TypedNode for MyNode {
         self.ys2.insert(new_idx);
       }
       // MyNodeSource::Z => { // enum link
-      //     tgraph::typed_graph::IndexEnum::modify(&mut self.z.value, new_idx);
+      //     ttgraph::typed_graph::IndexEnum::modify(&mut self.z.value, new_idx);
       // }
       Self::Source::U(idx) => { // vec link
         self.u[idx] = new_idx;
       }
     }
   }
-  fn add_link(&mut self, link: Self::LinkMirror, target: tgraph::typed_graph::NodeIndex) {
+  fn add_link(&mut self, link: Self::LinkMirror, target: ttgraph::typed_graph::NodeIndex) {
     match link{
       Self::Link::X => {
         if self.x.is_empty() {
@@ -119,13 +119,13 @@ impl tgraph::typed_graph::TypedNode for MyNode {
       },
     }
   }
-  fn remove_link(&mut self, link: Self::LinkMirror, target: tgraph::typed_graph:: NodeIndex) {
+  fn remove_link(&mut self, link: Self::LinkMirror, target: ttgraph::typed_graph:: NodeIndex) {
     match link{
       Self::Link::X => {
         if self.x.is_empty() {
           panic!("Remove link on an empty point link!");
         } else {
-          self.x = tgraph::typed_graph::NodeIndex::empty();
+          self.x = ttgraph::typed_graph::NodeIndex::empty();
         }
       },
       Self::Link::Ys => {
@@ -186,7 +186,7 @@ enum NIEnum {
 Assume modify does not change the variant of the index enum
 
 ```rust
-impl tgraph::typed_graph::IndexEnum for NIEnum {
+impl ttgraph::typed_graph::IndexEnum for NIEnum {
     fn modify(&mut self, new_idx: NodeIndex) {
         *self = match self {
             NIEnum::A(idx) => NIEnum::A(new_idx),
@@ -305,45 +305,3 @@ impl NodeEnum for MyNodeEnum {
 }
 ```
 
-
-### Generated Trait
-
-A helper trait is generated for each type of node to do the `by-type` operations.
-
-```rust
-// Generated helper trait
-trait TGGenTraitNodeType<'a, IterT> {
-    fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>) -> IterT;
-    fn get_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>, idx: tgraph::typed_graph::NodeIndex)
-       -> Option<&Self>;
-}
-
-// Impl For NodeA
-impl<'a> TGGenTraitNodeType<'a, IterA<'a>> for NodeA {
-    fn iter_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>) -> TGGenIterA<'a> {
-        TGGenIterA { it: graph.iter_nodes() }
-    }
-    fn get_by_type(graph: &'a tgraph::typed_graph::Graph<NodeType>, idx: tgraph::typed_graph::NodeIndex)
-       -> Option<&NodeA>
-    {
-        // ...
-    }
-}
-
-// Generated Iterator for A(NodeA)
-struct TGGenIterA<'a> {
-    it: tgraph::typed_graph::Iter<'a, NodeType>,
-}
-impl<'a> std::iter::Iterator for TGGenIterA<'a> {
-    type Item = (NodeIndex, &'a NodeA);
-    fn next(&mut self) -> Option<Self::Item> {
-        self.it
-            .next()
-            .and_then(|(idx, node)| {
-                if let NodeType::A(x) = &node { Some((*idx, x)) } else { None }
-            })
-        // Iterate and filter
-    }
-}
-impl<'a> std::iter::FusedIterator for IterA<'a> {}
-```

@@ -69,7 +69,7 @@ pub(crate) fn make_get_links_by_group(
     });
   }
   quote! {
-    fn get_links_by_group(&self, name: &'static str) -> Vec<tgraph::NodeIndex> {
+    fn get_links_by_group(&self, name: &'static str) -> Vec<ttgraph::NodeIndex> {
       match name{
         #(#arms)*
         _ => vec![],

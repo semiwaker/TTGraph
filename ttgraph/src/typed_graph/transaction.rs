@@ -23,7 +23,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Please ensure the [`Graph`] and the [`Transaction`] use the same Context!
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -61,7 +61,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// If there is a node that is allocaed, but is not filled back, it is detected and panic to warn the user.
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   last: NodeIndex,
@@ -101,7 +101,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Insert a new node into the graph, returns a [`NodeIndex`] pointing to the new node
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -128,7 +128,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Note: nodes created by [`insert`](Transaction::insert) and [`alloc`](Transaction::alloc) in this uncommitted transaction can also be removed.
   /// Example:
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -162,7 +162,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// If the type of the node is previously known, use [`mut_node!`](crate::mut_node!) instead.
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -192,7 +192,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 2);
   /// ```
   /// # Performance warning
-  /// TGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
+  /// TTGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
   /// Try not to create a node with a very large connectivity, or merge multiple operations into once.
   pub fn mutate<F>(&mut self, node: NodeIndex, func: F)
   where
@@ -209,7 +209,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// If the type of the node is previously known, use [`update_node!`](crate::update_node!) instead.
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -240,7 +240,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 2);
   /// ```
   /// # Performance warning
-  /// TGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
+  /// TTGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
   /// Try not to create a node with a very large connectivity, or merge multiple operations into once.
   pub fn update<F>(&mut self, node: NodeIndex, func: F)
   where
@@ -258,7 +258,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// See [`redirect_links`](Transaction::redirect_links) for counter-example
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// use std::collections::BTreeSet;
   /// #[derive(TypedNode)]
   /// struct NodeA {
@@ -306,7 +306,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// See [`redirect_all_links`](Transaction::redirect_all_links) for counter-example
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// use std::collections::BTreeSet;
   /// #[derive(TypedNode)]
   /// struct NodeA {
@@ -362,7 +362,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Merge a graph and all its nodes
   /// The merged graph and this transaction should have the same context, otherwise use [`switch_context`](Graph::switch_context) first.
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,
@@ -409,7 +409,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Currently this method does nothing.
   /// # Example
   /// ```
-  /// use tgraph::*;
+  /// use ttgraph::*;
   /// #[derive(TypedNode)]
   /// struct NodeA{
   ///   data: usize,

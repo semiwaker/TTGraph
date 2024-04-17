@@ -103,11 +103,11 @@ pub(crate) fn make_bidirectional_link(
           let var2_ty = &ty_map[var2];
           let link2_camel = upper_camel(link2);
           possible_links.push(quote!{
-              Self::LinkMirrorEnum::#var2(<#var2_ty as tgraph::TypedNode>::LinkMirror::#link2_camel)
+              Self::LinkMirrorEnum::#var2(<#var2_ty as ttgraph::TypedNode>::LinkMirror::#link2_camel)
             });
         }
         arms.push(quote! {
-          <#ty as tgraph::TypedNode>::LinkMirror::#camel => vec![#(#possible_links),*],
+          <#ty as ttgraph::TypedNode>::LinkMirror::#camel => vec![#(#possible_links),*],
         });
       }
       link_mirrors_of_arms.push(quote! {
@@ -129,8 +129,8 @@ pub(crate) fn make_bidirectional_link(
         let camel = upper_camel(link);
         vecs.push(quote!{
             (
-              Vec::from_iter(self.iter_links(Self::LinkMirrorEnum::#var(<#ty as tgraph::TypedNode>::LinkMirror::#camel))),
-              self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#var(<#ty as tgraph::TypedNode>::LinkMirror::#camel)),
+              Vec::from_iter(self.iter_links(Self::LinkMirrorEnum::#var(<#ty as ttgraph::TypedNode>::LinkMirror::#camel))),
+              self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#var(<#ty as ttgraph::TypedNode>::LinkMirror::#camel)),
             ),
           })
       }
@@ -144,7 +144,7 @@ pub(crate) fn make_bidirectional_link(
   }
 
   quote! {
-    fn get_bidiretional_links(&self) -> tgraph::BidirectionalLinks<Self::LinkMirrorEnum> {
+    fn get_bidiretional_links(&self) -> ttgraph::BidirectionalLinks<Self::LinkMirrorEnum> {
       match self {
         #(#links_arms)*
         _ => vec![],

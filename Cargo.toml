@@ -1,5 +1,5 @@
 [workspace]
-members = ["tgraph", "tgraph_macros"]
+members = ["ttgraph", "ttgraph_macros"]
 resolver = "2"
 
 [workspace.package]

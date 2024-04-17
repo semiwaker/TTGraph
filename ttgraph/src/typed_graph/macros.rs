@@ -4,7 +4,7 @@
 ///
 /// # Example
 /// ```
-/// use tgraph::*;
+/// use ttgraph::*;
 ///
 /// #[derive(TypedNode)]
 /// struct NodeA{
@@ -44,7 +44,7 @@ macro_rules! get_node {
 ///
 /// # Example
 /// ```
-/// use tgraph::*;
+/// use ttgraph::*;
 ///
 /// #[derive(TypedNode)]
 /// struct NodeA{
@@ -97,7 +97,7 @@ macro_rules! iter_nodes {
 ///
 /// # Example
 /// ```
-/// use tgraph::*;
+/// use ttgraph::*;
 ///
 /// #[derive(TypedNode)]
 /// struct NodeA{
@@ -146,7 +146,7 @@ macro_rules! mut_node {
 ///
 /// # Example
 /// ```
-/// use tgraph::*;
+/// use ttgraph::*;
 ///
 /// #[derive(TypedNode)]
 /// struct NodeA{

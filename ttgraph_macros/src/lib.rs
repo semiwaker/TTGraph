@@ -21,6 +21,26 @@ use group::*;
 mod utils;
 use utils::*;
 
+/// Collect TypedNodes together to form an enum
+/// # Syntax
+/// ```plain
+/// node_enum!{
+///   // rust enum
+///   enum $EnumName{
+///     // ...
+///   }
+///   // optional, to declare bidirectional links
+///   bidirectional!{
+///     $var.$field <-> $var.$field,
+///     // ...
+///   }
+///   // optional, to declare the grouping of enum variant
+///   group!{
+///     $group_name{$var1, $var2, ...}
+///     // ...
+///   }
+/// }
+/// ```
 #[proc_macro]
 #[proc_macro_error]
 pub fn node_enum(macro_input: TokenStream) -> TokenStream {
@@ -107,6 +127,9 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   result.into()
 }
 
+/// Automatically implements `TypedNode` trait for a struct.
+/// Helpep attributes:
+/// + `#[group(group1, group2, ...)]`: declare this field (must be links) is inside some groups
 #[proc_macro_derive(TypedNode, attributes(group))]
 #[proc_macro_error]
 pub fn typed_node(input: TokenStream) -> TokenStream {
@@ -119,7 +142,7 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
   let mut links = Vec::new();
   let mut data = Vec::new();
   let mut groups = Vec::new();
-  let direct_paths = vec![parse_quote!(tgraph::NodeIndex), parse_quote!(NodeIndex)];
+  let direct_paths = vec![parse_quote!(ttgraph::NodeIndex), parse_quote!(NodeIndex)];
   let mut hset_paths = Vec::new();
   let mut bset_paths = Vec::new();
   let mut vec_paths = Vec::new();
