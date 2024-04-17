@@ -10,5 +10,5 @@ description = "Typed/Transactional Graph container"
 readme = "README.md"
 repository = "https://github.com/semiwaker/TTGraph"
 license = "MIT OR Apache-2.0"
-keywords = ["graph", "transaction", "typed", "data structure"]
+keywords = ["graph", "transaction", "typed", "data_structure"]
 categories = ["data-structures"]
