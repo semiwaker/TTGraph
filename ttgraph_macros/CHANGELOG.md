@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.1.0, ttgraph v0.1.0 ([`76089e0`](https://github.com/semiwaker/TTGraph/commit/76089e0ec89fdf3c67d75b6d8ade025d67112303))
     - Release ttgraph_macros v0.1.0, ttgraph v0.1.0 ([`6df6c31`](https://github.com/semiwaker/TTGraph/commit/6df6c3172ba43e4cfc3a922c2721e9934cf28f7b))
     - Add changelog ([`e40361d`](https://github.com/semiwaker/TTGraph/commit/e40361d37ae04c8155f1c9f17f9ae23bb2096f66))
     - Modified for name change ([`29773ce`](https://github.com/semiwaker/TTGraph/commit/29773ce6292b83db04d2b12e863ee87709a560dd))
