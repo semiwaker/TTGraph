@@ -8,12 +8,15 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::sync::Arc;
 
+use serde::{Deserialize, Serialize};
+
 use uuid::Uuid;
 
 use crate::arena::{self, Arena, ArenaIndex, IdDistributer};
 
 pub mod debug;
 pub mod display;
+pub mod serialize;
 // pub mod library;
 pub mod macro_traits;
 pub use macro_traits::*;
@@ -27,7 +30,9 @@ pub use ttgraph_macros::*;
 
 /// The index of a node, which implements [`Copy`].
 /// Note: The index is very independent to the [`Graph`], which does not check if it is realy pointing to a node in the graph.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(
+  Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub struct NodeIndex(pub usize);
 
 impl NodeIndex {
@@ -578,6 +583,18 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       self.back_links.get_mut(&y).unwrap().remove(&(x, s));
     }
   }
+
+  pub(crate) fn do_deserialize(ctx: &Context, nodes: Vec<(NodeIndex, NodeT)>) -> Self {
+    let mut arena = Arena::new(Arc::clone(&ctx.node_dist));
+    for (idx, node) in nodes {
+      arena.fill_back(idx, node);
+    }
+    let mut bd = BidirectionLinkContainer::default();
+    let mut graph = Self::new(ctx);
+    graph.merge_nodes(arena, &mut bd);
+    graph.apply_bidirectional_links(bd);
+    graph
+  }
 }
 
 // Helper struct for bidirectional links
@@ -659,6 +676,13 @@ impl Context {
     Context {
       id: Uuid::new_v4(),
       node_dist: Arc::new(IdDistributer::new()),
+    }
+  }
+
+  pub(crate) fn from_id(id: Uuid, cnt: usize) -> Self {
+    Context {
+      id,
+      node_dist: Arc::new(IdDistributer::from_count(cnt)),
     }
   }
 }

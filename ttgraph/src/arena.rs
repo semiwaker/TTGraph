@@ -1,7 +1,7 @@
 use std::collections::{btree_map, BTreeMap};
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::iter::{FusedIterator, Iterator};
+use std::iter::{ExactSizeIterator, FusedIterator, Iterator};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -99,11 +99,21 @@ impl<K: ArenaIndex, V> Arena<K, V> {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Iter<'a, K, V>(btree_map::Iter<'a, K, V>)
 where
   K: ArenaIndex,
   V: 'a;
+
+impl<'a, K, V> Clone for Iter<'a, K, V>
+where
+  K: ArenaIndex,
+  V: 'a,
+{
+  fn clone(&self) -> Self {
+    Self(self.0.clone())
+  }
+}
 
 impl<'a, K, V> Iterator for Iter<'a, K, V>
 where
@@ -121,7 +131,15 @@ where
   V: 'a,
 {
 }
-
+impl<'a, K, V> ExactSizeIterator for Iter<'a, K, V>
+where
+  K: ArenaIndex,
+  V: 'a,
+{
+  fn len(&self) -> usize {
+    self.0.len()
+  }
+}
 #[derive(Debug)]
 pub struct IntoIter<K, V>(btree_map::IntoIter<K, V>)
 where
@@ -227,6 +245,10 @@ impl IdDistributer {
   pub fn alloc(&self) -> usize {
     let c = self.cnt.fetch_add(1, Ordering::Relaxed);
     c + 1
+  }
+
+  pub(crate) fn from_count(cnt: usize) -> IdDistributer {
+    IdDistributer { cnt: AtomicUsize::new(cnt) }
   }
 }
 

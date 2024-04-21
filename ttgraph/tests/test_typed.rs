@@ -4,17 +4,21 @@
 
 #[cfg(test)]
 mod tests_typed {
+  use serde::{Deserialize, Serialize};
   use std::collections::BTreeSet;
 
-  use ttgraph::*;
+  use ttgraph::{
+    serialize::{deserialize_graph, GraphSerializer},
+    *,
+  };
 
-  #[derive(TypedNode, Debug)]
+  #[derive(TypedNode, Debug, Serialize, Deserialize)]
   struct NodeA {
     to: NodeIndex,
     name: String,
   }
 
-  #[derive(TypedNode, Debug)]
+  #[derive(TypedNode, Debug, Serialize, Deserialize)]
   struct NodeB {
     a: NodeIndex,
     x: NodeIndex,
@@ -22,7 +26,7 @@ mod tests_typed {
   }
 
   node_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, Serialize, Deserialize)]
     enum MyNodeEnum {
       A(NodeA),
       B(NodeB),
@@ -30,7 +34,7 @@ mod tests_typed {
     }
   }
 
-  #[derive(TypedNode, Clone, Debug)]
+  #[derive(TypedNode, Clone, Debug, Serialize, Deserialize)]
   struct NodeEmpty {
     x: usize,
   }
@@ -87,13 +91,13 @@ mod tests_typed {
     // for (idx, n) in Edge::iter_by_type(graph) {}
   }
 
-  #[derive(TypedNode, Debug)]
+  #[derive(TypedNode, Debug, Serialize, Deserialize)]
   struct CNode {
     tos: BTreeSet<NodeIndex>,
   }
 
   node_enum! {
-    #[derive(Debug)]
+    #[derive(Debug, Serialize, Deserialize)]
     enum TestNode {
       CNode(CNode),
     }
@@ -125,6 +129,15 @@ mod tests_typed {
     graph.commit(trans);
 
     println!("{:?}", graph);
+
+    let serialized = serde_json::to_string(&graph).unwrap();
+    println!("{}", serialized);
+    println!("{}", serde_json::to_string(&GraphSerializer::<TestNode>::from(graph)).unwrap());
+
+    let deserialized: GraphSerializer<TestNode> =
+      serde_json::from_str(&serialized).unwrap();
+    let (ctx2, graph2) = deserialize_graph(deserialized);
+    println!("{:?}", graph2);
   }
 
   #[test]
