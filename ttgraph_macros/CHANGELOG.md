@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 5 days passed between releases.
+ - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add link check ([`bce3e18`](https://github.com/semiwaker/TTGraph/commit/bce3e185e843e9cfafde81770e1195ff360d6f69))
+</details>
+
 ## 0.1.0 (2024-04-17)
 
 ### Added
@@ -19,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -30,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.1.0, ttgraph v0.1.0 ([`07aa5ac`](https://github.com/semiwaker/TTGraph/commit/07aa5ac027647dbffaaad2dd46f28a42f3eeaac0))
     - Release ttgraph_macros v0.1.0, ttgraph v0.1.0 ([`76089e0`](https://github.com/semiwaker/TTGraph/commit/76089e0ec89fdf3c67d75b6d8ade025d67112303))
     - Release ttgraph_macros v0.1.0, ttgraph v0.1.0 ([`6df6c31`](https://github.com/semiwaker/TTGraph/commit/6df6c3172ba43e4cfc3a922c2721e9934cf28f7b))
     - Add changelog ([`e40361d`](https://github.com/semiwaker/TTGraph/commit/e40361d37ae04c8155f1c9f17f9ae23bb2096f66))

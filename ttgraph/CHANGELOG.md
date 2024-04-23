@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 3 days passed between releases.
+ - 2 commits contributed to the release over the course of 1 calendar day.
+ - 5 days passed between releases.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Add link check ([`bce3e18`](https://github.com/semiwaker/TTGraph/commit/bce3e185e843e9cfafde81770e1195ff360d6f69))
     - Add serialize & deserialize ([`2621e5a`](https://github.com/semiwaker/TTGraph/commit/2621e5abae575f8c35a141c624ee6f9725ac2c70))
 </details>
 
