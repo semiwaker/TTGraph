@@ -15,6 +15,9 @@ use typed_node::*;
 mod bidirectional;
 use bidirectional::*;
 
+mod link_check;
+use link_check::*;
+
 mod group;
 use group::*;
 
@@ -85,6 +88,7 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
 
   let mut bidirectional_links = Vec::new();
   let mut groups = Vec::new();
+  let mut type_annotations = Vec::new();
   for item in macro_input.items.iter().skip(1) {
     if let Item::Macro(the_macro) = item {
       if the_macro.mac.path.is_ident("bidirectional") {
@@ -100,6 +104,14 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
         let result: syn::Result<NamedGroupVec> = parse2(the_macro.mac.tokens.clone());
         match result {
           Ok(x) => groups.extend(x.groups),
+          Err(err) => {
+            emit_error!(err.span(), "{}", err);
+          },
+        }
+      } else if the_macro.mac.path.is_ident("link_type") {
+        let result: syn::Result<TypeAnnotationVec> = parse2(the_macro.mac.tokens.clone());
+        match result {
+          Ok(x) => type_annotations.extend(x.annotations),
           Err(err) => {
             emit_error!(err.span(), "{}", err);
           },
@@ -122,6 +134,7 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
     &node_type_mirror_name,
     &bidirectional_links,
     &groups,
+    &type_annotations,
   );
 
   result.into()

@@ -4,6 +4,7 @@ use syn::{Generics, Ident, Type, Visibility};
 
 use crate::bidirectional::*;
 use crate::group::*;
+use crate::link_check::*;
 
 pub(crate) fn make_source_enum(
   result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
@@ -69,8 +70,14 @@ pub(crate) fn make_node_type_mirror_enum(
 pub(crate) fn make_node_enum(
   result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
   source_enum_name: &Ident, link_mirror_enum_name: &Ident, node_type_mirror_name: &Ident,
-  bidirectional_links: &Vec<BidirectionalLink>, groups: &Vec<NamedGroup>
+  bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup], type_annotations: &[TypeAnnotation]
 ) {
+  let mut get_node_type_arms= Vec::new();
+  for (ident, _) in vars{
+    get_node_type_arms.push(quote!{Self::#ident(_) => Self::NodeTypeMirror::#ident,})
+  }
+
+
   let mut iter_src_arms = Vec::new();
   for (ident, ty) in vars {
     iter_src_arms.push(quote! { Self::#ident(x) => Box::new(
@@ -97,10 +104,10 @@ pub(crate) fn make_node_enum(
       Self::#ident(x) => {
         if let Self::SourceEnum::#ident(src) = source {
           let (removed, added) = <#ty as TypedNode>::modify_link(x, src, old_idx, new_idx);
-          ttgraph::BidirectionalSideEffect {
-            link_mirrors: self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#ident(src.to_link_mirror())),
-            add: if (added) {new_idx} else {ttgraph::NodeIndex::empty()},
-            remove: if (removed) {old_idx} else {ttgraph::NodeIndex::empty()},
+          ttgraph::ModifyResult {
+            bd_link_mirrors: self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#ident(src.to_link_mirror())),
+            added,
+            removed,
           }
         } else {
           panic!("Unmatched node type and source type!")
@@ -182,6 +189,7 @@ pub(crate) fn make_node_enum(
 
   let bidirectional_link = make_bidirectional_link(vars, bidirectional_links);
   let in_group = make_in_group(groups);
+  let link_check = make_check_link_type(vars, type_annotations);
 
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
   quote!{
@@ -189,6 +197,11 @@ pub(crate) fn make_node_enum(
       type SourceEnum = #source_enum_name #ty_generics;
       type LinkMirrorEnum = #link_mirror_enum_name #ty_generics;
       type NodeTypeMirror = #node_type_mirror_name;
+      fn get_node_type_mirror(&self) -> Self::NodeTypeMirror {
+        match self{
+          #(#get_node_type_arms)*
+        }
+      }
       fn iter_sources(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>> {
         match self {
           #(#iter_src_arms)*
@@ -199,7 +212,7 @@ pub(crate) fn make_node_enum(
           #(#iter_link_arms)*
         }
       }
-      fn modify_link(&mut self, source: Self::SourceEnum, old_idx: ttgraph::NodeIndex, new_idx: ttgraph::NodeIndex) -> ttgraph::BidirectionalSideEffect<Self::LinkMirrorEnum> {
+      fn modify_link(&mut self, source: Self::SourceEnum, old_idx: ttgraph::NodeIndex, new_idx: ttgraph::NodeIndex) -> ttgraph::ModifyResult<Self::LinkMirrorEnum> {
         match self{
           #(#mod_arms)*
         }
@@ -238,18 +251,20 @@ pub(crate) fn make_node_enum(
         }
       }
       
-      fn to_link_mirror_enum(input: &Self::SourceEnum) -> Self::LinkMirrorEnum{
+      fn to_link_mirror_enum(input: Self::SourceEnum) -> Self::LinkMirrorEnum{
         match input {
           #(#to_link_arms)*
         }
       }
-      fn to_source_enum(input: &Self::LinkMirrorEnum) -> Self::SourceEnum{
+      fn to_source_enum(input: Self::LinkMirrorEnum) -> Self::SourceEnum{
         match input {
           #(#to_src_arms)*
         }
       }
 
       #bidirectional_link
+
+      #link_check
     }
   }.to_tokens(result);
 }

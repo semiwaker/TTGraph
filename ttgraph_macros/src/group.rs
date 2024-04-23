@@ -78,7 +78,7 @@ pub(crate) fn make_get_links_by_group(
   }
 }
 
-pub(crate) fn make_in_group(groups: &Vec<NamedGroup>) -> TokenStream {
+pub(crate) fn make_in_group(groups: &[NamedGroup]) -> TokenStream {
   let mut name_arms = Vec::new();
   for NamedGroup { name, idents } in groups {
     let mut matched_vars = Vec::new();

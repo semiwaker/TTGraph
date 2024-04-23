@@ -48,7 +48,7 @@ pub(crate) fn make_node_source_enum(
     }
 
     impl #source_enum{
-      pub fn to_link_mirror(&self) -> #link_mirror{
+      pub fn to_link_mirror(self) -> #link_mirror{
         match self{
           #(#to_link_arms)*
         }
@@ -95,7 +95,7 @@ pub(crate) fn make_link_mirror(
     }
 
     impl #link_mirror{
-      pub fn to_source(&self) -> #source_enum {
+      pub fn to_source(self) -> #source_enum {
         match self {
           #(#to_src_arms)*
         }
@@ -447,10 +447,10 @@ pub(crate) fn make_typed_node(
         }
       }
 
-      fn to_source(input: &Self::LinkMirror) -> Self::Source {
+      fn to_source(input: Self::LinkMirror) -> Self::Source {
         input.to_source()
       }
-      fn to_link_mirror(input: &Self::Source) -> Self::LinkMirror {
+      fn to_link_mirror(input: Self::Source) -> Self::LinkMirror {
         input.to_link_mirror()
       }
     }

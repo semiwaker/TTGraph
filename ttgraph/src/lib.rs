@@ -586,9 +586,50 @@
 //!
 //! Other methods for type erasure are listed in the document of `NodeEnum` and `TypedNode` traits.
 //!
+//! ## Link type check
+//!
+//! A node links to other node with a [`NodeIndex`] in TTGraph, which is in fact weak typed as any variant in the node enum can be pointed by the NodeIndex.
+//!
+//! For debug reason, an optional link type check can be added with `link_type!{ #var.#field : #var, ... }`. When a transaction is committed, all changes which be checked. Panics if a NodeIndex points to the wrong enum variant.
+//!
+//! Feature `debug` is required. Otherwise all checks are skipped.
+//!
+//! ```rust
+//! use ttgraph::*;
+//! use std::collections::HashSet;
+//! #[derive(TypedNode)]
+//! struct FactoryNode{
+//!  name: String,
+//!  workers: HashSet<NodeIndex>,
+//! }
+//! #[derive(TypedNode)]
+//! struct HumanWorkerNode{
+//!   name: String,
+//!   factory: NodeIndex,
+//! }
+//! #[derive(TypedNode)]
+//! struct RobotWorkerNode{
+//!   name: String,
+//!   factory: NodeIndex,
+//! }
+//! node_enum!{
+//!   enum Node{
+//!     Factory(FactoryNode),
+//!     Human(HumanWorkerNode),
+//!     Robot(RobotWorkerNode),
+//!   }
+//!   link_type!{
+//!     Factory.workers : {Human, Robot},
+//!     Human.factory: Factory,
+//!     Robot.factory: Factory,
+//!   }
+//! }
+//! ```
+//!
+//! In this example, workers of a factory can link to human or robot, while the factory field of human and robot must link to a factory.
+//!
 //! ## Working In Progress
 //!
-//! + Stronger typed. NodeIndex is actually untyped, so a link can be connected to any node. A macro to indicate which enum variant a link can connect to, and a runtime check may be added in the future.
 //! + Graph creation macro. A sub-language to simplify great amount of `alloc_node`, `fill_back_node` and `new_node` calls.
 //! + Graph transition. A way to conviently transit `Graph<NodeEnumA>` to `Graph<NodeEnumB>`, if `NodeEnumA` and `NodeEnumB` have a lot of common variants.
 //! + Check when commit. A way to add runtime check when commit.

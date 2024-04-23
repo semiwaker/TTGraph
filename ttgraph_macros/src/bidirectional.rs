@@ -67,7 +67,7 @@ pub(crate) fn check_bidirectional_links(
 }
 
 pub(crate) fn make_bidirectional_link(
-  vars: &[(Ident, Type)], links: &Vec<BidirectionalLink>,
+  vars: &[(Ident, Type)], links: &[BidirectionalLink],
 ) -> TokenStream {
   let mut b_links: BTreeMap<Ident, BTreeMap<Ident, BTreeSet<(Ident, Ident)>>> =
     BTreeMap::new();

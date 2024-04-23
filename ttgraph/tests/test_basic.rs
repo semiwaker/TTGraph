@@ -132,7 +132,10 @@ mod tests_typed {
 
     let serialized = serde_json::to_string(&graph).unwrap();
     println!("{}", serialized);
-    println!("{}", serde_json::to_string(&GraphSerializer::<TestNode>::from(graph)).unwrap());
+    println!(
+      "{}",
+      serde_json::to_string(&GraphSerializer::<TestNode>::from(graph)).unwrap()
+    );
 
     let deserialized: GraphSerializer<TestNode> =
       serde_json::from_str(&serialized).unwrap();
