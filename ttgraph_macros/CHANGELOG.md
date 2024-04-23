@@ -5,13 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.0 (2024-04-23)
+
+### Added
+
+ - Link check macros
+
+### Changed
+
+ - Impls of TypedNode and NodeEnum
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 5 days passed between releases.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -23,21 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Fixed Change log ([`ac7eb9d`](https://github.com/semiwaker/TTGraph/commit/ac7eb9dcf01ba0441200532233567b01f889a64f))
     - Adjusting changelogs prior to release of ttgraph_macros v0.2.0, ttgraph v0.2.0 ([`6598ad1`](https://github.com/semiwaker/TTGraph/commit/6598ad12b6e0e0ac29d9c78c1ec39b710e6aa02e))
     - Adjusting changelogs prior to release of ttgraph_macros v0.2.0, ttgraph v0.2.0 ([`d0ddff6`](https://github.com/semiwaker/TTGraph/commit/d0ddff647fdc37e7b571d9c9962e5d03034fc1ad))
     - Changelog ([`85488e4`](https://github.com/semiwaker/TTGraph/commit/85488e497d29653dc25f1a6b8fd823d3587aec8d))
     - Add link check ([`bce3e18`](https://github.com/semiwaker/TTGraph/commit/bce3e185e843e9cfafde81770e1195ff360d6f69))
 </details>
-
-## 0.2.0 (2024-04-23)
-
-### Added
-
- - Link check macros
-
-### Changed
-
- - Impls of TypedNode and NodeEnum
 
 ## 0.1.0 (2024-04-17)
 
