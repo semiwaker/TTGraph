@@ -95,6 +95,11 @@ macro_rules! iter_nodes {
 /// Use the [`mutate`](crate::Transaction::mutate) method of the transaction, assume the node is $var variant of the NodeEnum.
 /// Panics if the enum does not match.
 ///
+/// # Overloads:
+/// + Legacy: `mut_node!(graph, NodeEnum::Variant, idx, x, { ... })`
+/// + Normal closure: `mut_node!(graph, NodeEnum::Variant, idx, |x| { ... })`
+/// + Move closure: `mut_node!(graph, NodeEnum::Variant, idx, move |x| { ... })`
+///
 /// # Example
 /// ```
 /// use ttgraph::*;
@@ -119,7 +124,7 @@ macro_rules! iter_nodes {
 ///
 /// trans = Transaction::new(&ctx);
 /// // It is similar to this closure |x: &mut NodeA| {x.a =2 }
-/// mut_node!(trans, MyNodeEnum::A, id, x, {
+/// mut_node!(trans, MyNodeEnum::A, id, |x| {
 ///   x.a = 2;
 /// });
 /// graph.commit(trans);
@@ -139,10 +144,33 @@ macro_rules! mut_node {
       }
     })
   };
+  ($transaction: expr, $var: path, $idx: expr, | $node: ident | $func: block) => {
+    $transaction.mutate($idx, |x| {
+      if let $var($node) = x {
+        $func;
+      } else {
+        panic!("Type does not match!");
+      }
+    })
+  };
+  ($transaction: expr, $var: path, $idx: expr, move | $node: ident | $func: block) => {
+    $transaction.mutate($idx, move |x| {
+      if let $var($node) = x {
+        $func;
+      } else {
+        panic!("Type does not match!");
+      }
+    })
+  };
 }
 
 /// Use the [`update`](crate::Transaction::update) method of the transaction, assume the node is $var variant of the NodeEnum.
 /// Panics if the enum does not match.
+///
+/// # Overloads:
+/// + Legacy: `update_node!(graph, NodeEnum::Variant, idx, x, { ... })`
+/// + Normal closure: `update_node!(graph, NodeEnum::Variant, idx, |x| { ... })`
+/// + Move closure: `update_node!(graph, NodeEnum::Variant, idx, move |x| { ... })`
 ///
 /// # Example
 /// ```
@@ -168,7 +196,7 @@ macro_rules! mut_node {
 ///
 /// trans = Transaction::new(&ctx);
 /// // It is similar to this closure |x: NodeA| { NodeA{ a: x.a + 1 } }
-/// update_node!(trans, MyNodeEnum::A, id, x, {
+/// update_node!(trans, MyNodeEnum::A, id, |x| {
 ///   NodeA {
 ///     a: x.a + 1,
 ///   }
@@ -183,6 +211,24 @@ macro_rules! mut_node {
 macro_rules! update_node {
   ($transaction: expr, $var: path, $idx: expr, $node: ident, $func: block) => {
     $transaction.update($idx, |x| {
+      if let $var($node) = x {
+        $var($func)
+      } else {
+        panic!("Type does not match!");
+      }
+    })
+  };
+  ($transaction: expr, $var: path, $idx: expr, | $node: ident | $func: block) => {
+    $transaction.update($idx, |x| {
+      if let $var($node) = x {
+        $var($func)
+      } else {
+        panic!("Type does not match!");
+      }
+    })
+  };
+  ($transaction: expr, $var: path, $idx: expr, move | $node: ident | $func: block) => {
+    $transaction.update($idx, move |x| {
       if let $var($node) = x {
         $var($func)
       } else {

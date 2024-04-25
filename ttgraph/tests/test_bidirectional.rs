@@ -489,11 +489,11 @@ mod test_bidirectional {
     let mut trans = Transaction::new(&ctx);
 
     let gn4 = trans.alloc();
-    mut_node!(trans, NodeType::GraphNode, gn1, x, {
+    mut_node!(trans, NodeType::GraphNode, gn1, |x| {
       x.tos.remove(&gn3);
       x.froms.remove(&gn3);
     });
-    mut_node!(trans, NodeType::GraphNode, gn2, x, {
+    mut_node!(trans, NodeType::GraphNode, gn2, |x| {
       x.tos.remove(&gn2);
     });
     update_node!(trans, NodeType::GraphNode, gn3, x, {
@@ -513,8 +513,9 @@ mod test_bidirectional {
     );
 
     let pn4 = trans.insert(NodeType::PairNode(PairNode { the_other: pn2 }));
-    mut_node!(trans, NodeType::PairNode, pn1, x, {
-      x.the_other = NodeIndex::empty();
+    let empty = NodeIndex::empty();
+    mut_node!(trans, NodeType::PairNode, pn1, move |x| {
+      x.the_other = empty;
     });
     mut_node!(trans, NodeType::PairNode, pn2, x, {
       x.the_other = NodeIndex::empty();
