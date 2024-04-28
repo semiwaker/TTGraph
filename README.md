@@ -398,6 +398,7 @@ In this example, workers of a factory can link to human or robot, while the fact
 
 + Fixed `IntoIter` for `&Graph`.
 + Adds more check function. Adds commit with check.
++ New overloads for `mut_node!` and `update_node!` to support `move ||`.
 
 ## License
 
