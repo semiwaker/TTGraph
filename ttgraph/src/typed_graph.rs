@@ -24,8 +24,10 @@ pub use macro_traits::*;
 mod transaction;
 pub use transaction::Transaction;
 
+pub mod check;
+use check::*;
+
 pub mod macros;
-// pub use macros::*;
 pub use ttgraph_macros::*;
 
 /// The index of a node, which implements [`Copy`].
@@ -310,6 +312,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// + Redirect all nodes
   /// + Remove nodes
   /// + Add/Remove links due to bidirectional declaration
+  /// + Check link types
   /// # Panics
   /// Panic if the transaction and the graph have different context
   /// # Example
@@ -332,30 +335,20 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// graph.commit(trans);
   /// ```
   pub fn commit(&mut self, t: Transaction<NodeT>) {
-    assert!(
-      t.ctx_id == self.ctx_id,
-      "The transaction and the graph are from different context!"
-    );
-    assert!(t.alloc_nodes.is_empty(), "There are unfilled allocated nodes");
+    let lcr = self.do_commit(t);
+    self.check_link_type(&lcr);
+  }
 
-    let mut bd = BidirectionalLinkRecorder::default();
-    let mut lcr = LinkChangeRecorder::default();
-
-    self.redirect_links_vec(t.redirect_links_vec, &mut bd, &mut lcr);
-    self.merge_nodes(t.inc_nodes, &mut bd, &mut lcr);
-    for (i, f) in t.mut_nodes {
-      self.modify_node(i, f, &mut bd, &mut lcr);
+  /// Similar to [`commit()`](Graph::commit), but with additional checks on the changed nodes and links.
+  /// See [`GraphCheck`] for more information.
+  #[cfg(feature = "debug")]
+  pub fn commit_checked(&mut self, t: Transaction<NodeT>, checks: &GraphCheck<NodeT>) {
+    let lcr = self.do_commit(t);
+    self.check_link_type(&lcr);
+    let result = self.check_change(&lcr, checks);
+    if !result.is_empty() {
+      panic!("Check failed: {:?}", &result);
     }
-    for (i, f) in t.update_nodes {
-      self.update_node(i, f, &mut bd, &mut lcr);
-    }
-    self.redirect_links_vec(t.redirect_all_links_vec, &mut bd, &mut lcr);
-    for n in &t.dec_nodes {
-      self.remove_node(*n, &mut bd, &mut lcr);
-    }
-
-    self.apply_bidirectional_links(bd);
-    self.check_change(lcr);
   }
 
   /// Switch the context and relabel the node ids.
@@ -389,11 +382,28 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     let mut lcr = LinkChangeRecorder::default();
     result.merge_nodes(new_nodes, &mut bd, &mut lcr);
     result.apply_bidirectional_links(bd);
-    result.check_change(lcr);
+    result.check_link_type(&lcr);
     result
   }
 
+  /// Check if all links are internal, just for debug
+  #[cfg(feature = "debug")]
+  pub fn check_integrity(&self) {
+    for (_, node) in &self.nodes {
+      for (y, _) in node.iter_sources() {
+        debug_assert!(
+          self.get(y).is_some(),
+          "Found external link, integrity check failed!"
+        );
+      }
+    }
+  }
+
+  #[cfg(not(feature = "debug"))]
+  pub fn check_integrity(&self) {}
+
   /// Check if the backlinks are connected correctly, just for debug
+  #[cfg(feature = "debug")]
   #[doc(hidden)]
   pub fn check_backlinks(&self) {
     let mut back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>> =
@@ -406,10 +416,40 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
           .back_links
           .get(&y)
           .unwrap_or_else(|| panic!("Node {} have no backlink!", x.0));
-        assert!(links.contains(&(x, s)));
+        debug_assert!(links.contains(&(x, s)));
       }
     }
-    assert_eq!(back_links, self.back_links);
+    debug_assert_eq!(back_links, self.back_links);
+  }
+
+  #[cfg(not(feature = "debug"))]
+  pub fn check_backlinks(&self) {}
+
+  fn do_commit(&mut self, t: Transaction<NodeT>) -> LinkChangeRecorder<NodeT> {
+    debug_assert!(
+      t.ctx_id == self.ctx_id,
+      "The transaction and the graph are from different context!"
+    );
+    debug_assert!(t.alloc_nodes.is_empty(), "There are unfilled allocated nodes");
+
+    let mut bd = BidirectionalLinkRecorder::default();
+    let mut lcr = LinkChangeRecorder::default();
+
+    self.redirect_links_vec(t.redirect_links_vec, &mut bd, &mut lcr);
+    self.merge_nodes(t.inc_nodes, &mut bd, &mut lcr);
+    for (i, f) in t.mut_nodes {
+      self.modify_node(i, f, &mut bd, &mut lcr);
+    }
+    for (i, f) in t.update_nodes {
+      self.update_node(i, f, &mut bd, &mut lcr);
+    }
+    self.redirect_links_vec(t.redirect_all_links_vec, &mut bd, &mut lcr);
+    for n in &t.dec_nodes {
+      self.remove_node(*n, &mut bd, &mut lcr);
+    }
+
+    self.apply_bidirectional_links(bd);
+    lcr
   }
 
   fn merge_nodes(
@@ -608,12 +648,50 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  fn check_change(&self, lcr: LinkChangeRecorder<NodeT>) {
-    for (_, y, l) in lcr.adds {
-      if !NodeT::check_link_type(self.nodes.get(y).unwrap().get_node_type_mirror(), l) {
-        panic!("Link type check failed!");
+  fn check_link_type(&self, lcr: &LinkChangeRecorder<NodeT>) {
+    for (_, y, l) in &lcr.adds {
+      if let Some(node) = self.nodes.get(*y) {
+        if !NodeT::check_link_type(node.get_node_type_mirror(), *l) {
+          panic!("Link type check failed!");
+        }
       }
     }
+  }
+
+  #[cfg(feature = "debug")]
+  fn check_change<'a>(
+    &self, lcr: &LinkChangeRecorder<NodeT>, checks: &'a GraphCheck<NodeT>,
+  ) -> Vec<&'a str> {
+    let mut failed = Vec::new();
+    let mut changed_nodes = BTreeSet::new();
+    for (x, _, _) in lcr.adds.iter().chain(lcr.removes.iter()) {
+      changed_nodes.insert(*x);
+    }
+    for (name, check_func) in &checks.node_checks {
+      for x in &changed_nodes {
+        if check_func(*x, self.get(*x).unwrap()).is_err() {
+          failed.push(name.as_str());
+          break;
+        }
+      }
+    }
+    for (name, check_func) in &checks.link_add_checks {
+      for (x, y, _) in &lcr.adds {
+        if check_func(*x, *y, self.get(*x).unwrap(), self.get(*y)).is_err() {
+          failed.push(name.as_str());
+          break;
+        }
+      }
+    }
+    for (name, check_func) in &checks.link_remove_checks {
+      for (x, y, _) in &lcr.adds {
+        if check_func(*x, *y, self.get(*x).unwrap(), self.get(*y)).is_err() {
+          failed.push(name.as_str());
+          break;
+        }
+      }
+    }
+    failed
   }
 
   pub(crate) fn do_deserialize(ctx: &Context, nodes: Vec<(NodeIndex, NodeT)>) -> Self {
@@ -732,6 +810,15 @@ impl<T: NodeEnum> IntoIterator for Graph<T> {
 
   fn into_iter(self) -> Self::IntoIter {
     self.nodes.into_iter()
+  }
+}
+
+impl<'a, T: NodeEnum + 'a> IntoIterator for &'a Graph<T> {
+  type IntoIter = Iter<'a, T>;
+  type Item = (NodeIndex, &'a T);
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.iter()
   }
 }
 

@@ -393,13 +393,11 @@ In this example, workers of a factory can link to human or robot, while the fact
 
 + Graph creation macro. A sub-language to simplify great amount of `alloc_node`, `fill_back_node` and `new_node` calls.
 + Graph transition. A way to conviently transit `Graph<NodeEnumA>` to `Graph<NodeEnumB>`, if `NodeEnumA` and `NodeEnumB` have a lot of common variants.
-+ Check when commit. A way to add runtime check when commit.
 
 ## Changes
 
-+ Add link type check.
-+ Modified and adds some methods in TypedNode and NodeEnum trait for link type check and clarity.
-+ Implemented Serialize and Deserialize.
++ Fixed `IntoIter` for `&Graph`.
++ Adds more check function. Adds commit with check.
 
 ## License
 
