@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### New Features
+
+ - <csr-id-4e1170114e835e496619d520a86e4aba9eef842d/> Group is supported in link type check
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 4 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Group is supported in link type check ([`4e11701`](https://github.com/semiwaker/TTGraph/commit/4e1170114e835e496619d520a86e4aba9eef842d))
+</details>
+
 ## 0.2.1 (2024-04-28)
 
 ### Adds
@@ -21,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 2 calendar days.
+ - 4 commits contributed to the release over the course of 2 calendar days.
  - 5 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -33,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph v0.2.1 ([`e2501a9`](https://github.com/semiwaker/TTGraph/commit/e2501a96d239ac2dfc7aebbbdc162f874d692380))
     - Write changelog ([`b11a80c`](https://github.com/semiwaker/TTGraph/commit/b11a80cd342811cf47673c6b0250ce4a7427f87e))
     - Adds commit_checked ([`e2a5d35`](https://github.com/semiwaker/TTGraph/commit/e2a5d351795cbde6289024f99828f91c9aa8f04b))
     - Modified mut_node! and update_node! to support move||{} ([`2894b52`](https://github.com/semiwaker/TTGraph/commit/2894b5219e1f33ce4ccd7d4c6ac23e843449aa9f))

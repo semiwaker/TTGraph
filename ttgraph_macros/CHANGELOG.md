@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### New Features
+
+ - <csr-id-4e1170114e835e496619d520a86e4aba9eef842d/> Group is supported in link type check
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 9 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Group is supported in link type check ([`4e11701`](https://github.com/semiwaker/TTGraph/commit/4e1170114e835e496619d520a86e4aba9eef842d))
+</details>
+
 ## 0.2.0 (2024-04-23)
 
 ### Added
@@ -19,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release.
+ - 6 commits contributed to the release.
  - 5 days passed between releases.
  - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -31,6 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.2.0, ttgraph v0.2.0 ([`c7f4974`](https://github.com/semiwaker/TTGraph/commit/c7f4974049f25e5a83c12a3f5e0eb1db3d76c990))
     - Fixed Change log ([`ac7eb9d`](https://github.com/semiwaker/TTGraph/commit/ac7eb9dcf01ba0441200532233567b01f889a64f))
     - Adjusting changelogs prior to release of ttgraph_macros v0.2.0, ttgraph v0.2.0 ([`6598ad1`](https://github.com/semiwaker/TTGraph/commit/6598ad12b6e0e0ac29d9c78c1ec39b710e6aa02e))
     - Adjusting changelogs prior to release of ttgraph_macros v0.2.0, ttgraph v0.2.0 ([`d0ddff6`](https://github.com/semiwaker/TTGraph/commit/d0ddff647fdc37e7b571d9c9962e5d03034fc1ad))
