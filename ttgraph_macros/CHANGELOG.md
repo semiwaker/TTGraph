@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Other
+
+ - <csr-id-7696ca920d04b89f9ec112dbf755a1bbd00240e6/> Write changelog
+
 ### New Features
 
  - <csr-id-4e1170114e835e496619d520a86e4aba9eef842d/> Group is supported in link type check
@@ -15,9 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 3 commits contributed to the release.
  - 9 days passed between releases.
- - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -27,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - BREAKING CHANGE: Reconstructed the package layout ([`961700c`](https://github.com/semiwaker/TTGraph/commit/961700c7d4c47be2e6be5f63a0549c09f8132389))
+    - Write changelog ([`7696ca9`](https://github.com/semiwaker/TTGraph/commit/7696ca920d04b89f9ec112dbf755a1bbd00240e6))
     - Group is supported in link type check ([`4e11701`](https://github.com/semiwaker/TTGraph/commit/4e1170114e835e496619d520a86e4aba9eef842d))
 </details>
 
