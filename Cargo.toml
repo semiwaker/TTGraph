@@ -27,7 +27,7 @@ categories.workspace = true
 serde = { version = "1.0.198", features = ["derive"] }
 visible = "0.0.1"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "serde"] }
-ttgraph_macros = { path = "ttgraph_macros" }
+ttgraph_macros = { path = "ttgraph_macros", version = "0.2.1" }
 serde_json = "1.0.116"
 
 [features]
