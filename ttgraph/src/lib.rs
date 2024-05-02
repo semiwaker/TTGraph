@@ -592,6 +592,8 @@
 //!
 //! For debug reason, an optional link type check can be added with `link_type!{ #var.#field : #var, ... }`. When a transaction is committed, all changes which be checked. Panics if a NodeIndex points to the wrong enum variant.
 //!
+//! Link type can also be a group. *If the name of a group and the name of a variant conflicts, it is treated as a group.*
+//!
 //! Feature `debug` is required. Otherwise all checks are skipped.
 //!
 //! ```rust

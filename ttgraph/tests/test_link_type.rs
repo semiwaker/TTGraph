@@ -26,10 +26,21 @@ mod test_link_type {
     x: NodeIndex,
   }
 
+  #[derive(TypedNode)]
+  struct NodeC {
+    x: NodeIndex,
+    y: NodeIndex,
+  }
+
   node_enum! {
     enum Node{
       A(NodeA),
       B(NodeB),
+      C(NodeC),
+    }
+    group!{
+      AB{A, B},
+      BC{B, C},
     }
     link_type!{
       A.to_a: A,
@@ -37,6 +48,9 @@ mod test_link_type {
       A.x: {A, B},
       B.to_a: A,
       B.to_b: B,
+      B.x: BC,
+      C.x: AB,
+      C.y: {AB, C},
     }
   }
 
@@ -48,6 +62,7 @@ mod test_link_type {
 
     let a = trans.alloc();
     let b = trans.alloc();
+    let c = trans.alloc();
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -61,9 +76,10 @@ mod test_link_type {
       Node::B(NodeB {
         to_a: vec![a],
         to_b: HashSet::from([b]),
-        x: b,
+        x: c,
       }),
     );
+    trans.fill_back(c, Node::C(NodeC { x: b, y: a }));
 
     graph.commit(trans);
   }
@@ -216,6 +232,37 @@ mod test_link_type {
     mut_node!(trans, Node::A, a, x, {
       x.to_b.insert(a);
     });
+    graph.commit(trans);
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_link_type7() {
+    let ctx = Context::new();
+    let mut graph = Graph::<Node>::new(&ctx);
+    let mut trans = Transaction::new(&ctx);
+
+    let a = trans.alloc();
+    let b = trans.alloc();
+    let c = trans.alloc();
+    trans.fill_back(
+      a,
+      Node::A(NodeA {
+        to_a: a,
+        to_b: BTreeSet::from([b]),
+        x: NodeIndex::empty(),
+      }),
+    );
+    trans.fill_back(
+      b,
+      Node::B(NodeB {
+        to_a: vec![a],
+        to_b: HashSet::from([b]),
+        x: c,
+      }),
+    );
+    trans.fill_back(c, Node::C(NodeC { x: c, y: c }));
+
     graph.commit(trans);
   }
 }

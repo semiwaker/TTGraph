@@ -5,6 +5,7 @@ use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::{self, braced, token, Ident, Token, Type};
 
+use crate::group::NamedGroup;
 use crate::utils::upper_camel;
 
 pub(crate) struct TypeAnnotation {
@@ -45,13 +46,25 @@ impl Parse for TypeAnnotationVec {
 }
 
 pub(crate) fn make_check_link_type(
-  vars: &[(Ident, Type)], annotations: &[TypeAnnotation],
+  vars: &[(Ident, Type)], annotations: &[TypeAnnotation], groups: &[NamedGroup],
 ) -> TokenStream {
   let mut arms = Vec::new();
   let mut anno_map: BTreeMap<Ident, BTreeSet<(Ident, Vec<Ident>)>> = BTreeMap::new();
+  let mut group_map: BTreeMap<Ident, Vec<Ident>> = BTreeMap::new();
+  for NamedGroup { name, idents } in groups {
+    group_map.insert(name.clone(), idents.clone());
+  }
   for TypeAnnotation { var, link, var2 } in annotations {
     let camel = upper_camel(link);
-    anno_map.entry(var.clone()).or_default().insert((camel, var2.clone()));
+    let mut legal_types = Vec::new();
+    for v in var2 {
+      if let btree_map::Entry::Occupied(g) = group_map.entry(v.clone()) {
+        legal_types.extend(g.get().clone().into_iter());
+      } else {
+        legal_types.push(v.clone());
+      }
+    }
+    anno_map.entry(var.clone()).or_default().insert((camel, legal_types));
   }
   for (var, ty) in vars {
     if let btree_map::Entry::Occupied(v) = anno_map.entry(var.clone()) {

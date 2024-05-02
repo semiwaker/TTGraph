@@ -353,6 +353,8 @@ A node links to other node with a `NodeIndex` in TTGraph, which is in fact weak 
 
 For debug reason, an optional link type check can be added with `link_type!{ #var.#field : #var, ... }`. When a transaction is committed, all changes which be checked. Panics if a NodeIndex points to the wrong enum variant.
 
+Link type can also be a group. *If the name of a group and the name of a variant conflicts, it is treated as a group.*
+
 Feature `debug` is required. Otherwise all checks are skipped.
 
 ```rust
@@ -396,9 +398,15 @@ In this example, workers of a factory can link to human or robot, while the fact
 
 ## Changes
 
+### 0.2.1
+
 + Fixed `IntoIter` for `&Graph`.
 + Adds more check function. Adds commit with check.
 + New overloads for `mut_node!` and `update_node!` to support `move ||`.
+
+### 0.2.2
+
++ Link type check can specify a group now.
 
 ## License
 

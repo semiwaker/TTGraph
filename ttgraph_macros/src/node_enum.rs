@@ -189,7 +189,7 @@ pub(crate) fn make_node_enum(
 
   let bidirectional_link = make_bidirectional_link(vars, bidirectional_links);
   let in_group = make_in_group(groups);
-  let link_check = make_check_link_type(vars, type_annotations);
+  let link_check = make_check_link_type(vars, type_annotations, groups);
 
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
   quote!{
