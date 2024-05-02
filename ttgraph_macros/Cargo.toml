@@ -1,7 +1,7 @@
 [package]
 name = "ttgraph_macros"
 description = "Proc-macros for TTGraph"
-version = "0.2.0"
+version = "0.2.1"
 authors.workspace = true
 edition.workspace = true
 readme.workspace = true
@@ -21,8 +21,6 @@ syn = { version = "2.0", features = [
     "visit-mut",
     "parsing",
 ] }
-paste = "1.0"
-synstructure = "0.13"
 change-case = "0.2"
 
 [lib]
