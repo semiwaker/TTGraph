@@ -5,11 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.1 (2024-05-02)
+
+<csr-id-7696ca920d04b89f9ec112dbf755a1bbd00240e6/>
 
 ### Other
 
  - <csr-id-7696ca920d04b89f9ec112dbf755a1bbd00240e6/> Write changelog
+
+### Documentation
+
+ - <csr-id-78668cf63fdfa2613c1a8ec1cacd4fa8185c8933/> Write changelog
 
 ### New Features
 
@@ -19,9 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 9 days passed between releases.
- - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -31,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Write changelog ([`78668cf`](https://github.com/semiwaker/TTGraph/commit/78668cf63fdfa2613c1a8ec1cacd4fa8185c8933))
     - BREAKING CHANGE: Reconstructed the package layout ([`961700c`](https://github.com/semiwaker/TTGraph/commit/961700c7d4c47be2e6be5f63a0549c09f8132389))
     - Write changelog ([`7696ca9`](https://github.com/semiwaker/TTGraph/commit/7696ca920d04b89f9ec112dbf755a1bbd00240e6))
     - Group is supported in link type check ([`4e11701`](https://github.com/semiwaker/TTGraph/commit/4e1170114e835e496619d520a86e4aba9eef842d))
