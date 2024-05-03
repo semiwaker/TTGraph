@@ -87,10 +87,34 @@ pub trait TypedNode: Sized {
 ///   }
 /// }
 /// ```
-pub trait NodeEnum {
-  type SourceEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
-  type LinkMirrorEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
-  type NodeTypeMirror: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
+pub trait NodeEnum: Sized {
+  type SourceEnum: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + 'static;
+  type LinkMirrorEnum: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + 'static;
+  type NodeTypeMirror: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + 'static;
   fn get_node_type_mirror(&self) -> Self::NodeTypeMirror;
   /// Iterate the links and its source reflection
   fn iter_sources(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
@@ -138,7 +162,9 @@ pub trait NodeEnum {
     &self, link: Self::LinkMirrorEnum,
   ) -> Vec<Self::LinkMirrorEnum>;
 
-  fn check_link_type(target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum) -> bool;
+  fn check_link_type(
+    target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum,
+  ) -> LinkTypeCheckResult<Self>;
 }
 
 pub type BidirectionalLinks<LinkMirrorT> = Vec<(Vec<NodeIndex>, Vec<LinkMirrorT>)>;

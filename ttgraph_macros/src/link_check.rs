@@ -71,26 +71,32 @@ pub(crate) fn make_check_link_type(
       let mut link_arms = Vec::new();
       for (link, var2) in v.get() {
         let mut var2_arms = Vec::new();
+        let mut expect = Vec::new();
         for v2 in var2 {
-          var2_arms.push(quote! {Self::NodeTypeMirror::#v2 => true,})
+          var2_arms.push(quote! {Self::NodeTypeMirror::#v2 => Ok(()),});
+          expect.push(quote! {Self::NodeTypeMirror::#v2});
         }
         link_arms.push(quote! {
           <#ty as TypedNode>::LinkMirror::#link => match target {
             #(#var2_arms)*
-            _ => false,
+            other => Err(ttgraph::LinkTypeError{
+              link,
+              expect: &[#(#expect),*],
+              found: other,
+            }),
           },
         })
       }
       arms.push(quote! {Self::LinkMirrorEnum::#var(v) => match v{
         #(#link_arms)*
-        _ => true,
+        _ => Ok(()),
       },});
     } else {
-      arms.push(quote! {Self::LinkMirrorEnum::#var(_) => true,});
+      arms.push(quote! {Self::LinkMirrorEnum::#var(_) => Ok(()),});
     }
   }
   quote! {
-    fn check_link_type(target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum) -> bool {
+    fn check_link_type(target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum) -> ttgraph::LinkTypeCheckResult<Self> {
       match link {
         #(#arms)*
       }

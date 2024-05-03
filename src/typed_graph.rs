@@ -651,8 +651,12 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   fn check_link_type(&self, lcr: &LinkChangeRecorder<NodeT>) {
     for (_, y, l) in &lcr.adds {
       if let Some(node) = self.nodes.get(*y) {
-        if !NodeT::check_link_type(node.get_node_type_mirror(), *l) {
-          panic!("Link type check failed!");
+        if let Result::Err(err) = NodeT::check_link_type(node.get_node_type_mirror(), *l)
+        {
+          panic!(
+            "Link type check failed! Link {:?} expect {:?}, found {:?}",
+            err.link, err.expect, err.found
+          );
         }
       }
     }
@@ -871,3 +875,12 @@ pub trait SourceIterator<T: TypedNode>:
   type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
   fn new(node: &T) -> Self;
 }
+
+/// A struct to hold errors found in link type check
+pub struct LinkTypeError<NodeT: NodeEnum> {
+  pub link: NodeT::LinkMirrorEnum,
+  pub expect: &'static [NodeT::NodeTypeMirror],
+  pub found: NodeT::NodeTypeMirror,
+}
+
+pub type LinkTypeCheckResult<NodeT> = Result<(), LinkTypeError<NodeT>>;

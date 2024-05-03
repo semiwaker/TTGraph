@@ -408,6 +408,10 @@ In this example, workers of a factory can link to human or robot, while the fact
 
 + Link type check can specify a group now.
 
+### 0.2.3
+
++ Link type check now reports more information.
+
 ## License
 
 Licensed under either of
