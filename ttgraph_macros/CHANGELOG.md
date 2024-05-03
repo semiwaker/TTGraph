@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### New Features
+
+ - <csr-id-ac486b1399f808a6c881779a0a64574bbf57e9f9/> Link type check reports more information
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Link type check reports more information ([`ac486b1`](https://github.com/semiwaker/TTGraph/commit/ac486b1399f808a6c881779a0a64574bbf57e9f9))
+</details>
+
 ## 0.2.1 (2024-05-02)
 
 <csr-id-7696ca920d04b89f9ec112dbf755a1bbd00240e6/>
@@ -25,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 9 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -37,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.2.1, ttgraph v0.2.2 ([`61671a3`](https://github.com/semiwaker/TTGraph/commit/61671a340269886c6260b835f5fe610e68872a5e))
     - Write changelog ([`78668cf`](https://github.com/semiwaker/TTGraph/commit/78668cf63fdfa2613c1a8ec1cacd4fa8185c8933))
     - BREAKING CHANGE: Reconstructed the package layout ([`961700c`](https://github.com/semiwaker/TTGraph/commit/961700c7d4c47be2e6be5f63a0549c09f8132389))
     - Write changelog ([`7696ca9`](https://github.com/semiwaker/TTGraph/commit/7696ca920d04b89f9ec112dbf755a1bbd00240e6))
