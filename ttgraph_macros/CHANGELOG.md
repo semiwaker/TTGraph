@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.2.2 (2024-05-03)
+
+### Documentation
+
+ - <csr-id-9e88418d9b896d07e5e05cb9ff059a7ea9510bdf/> Write changelog
 
 ### New Features
 
@@ -15,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
- - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 2 commits contributed to the release.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -26,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Write changelog ([`9e88418`](https://github.com/semiwaker/TTGraph/commit/9e88418d9b896d07e5e05cb9ff059a7ea9510bdf))
     - Link type check reports more information ([`ac486b1`](https://github.com/semiwaker/TTGraph/commit/ac486b1399f808a6c881779a0a64574bbf57e9f9))
 </details>
 
