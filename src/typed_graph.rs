@@ -869,7 +869,7 @@ impl Clone for Context {
 }
 
 /// A trait intended to be used in macros
-pub trait SourceIterator<T: TypedNode>:
+pub trait SourceIterator<T: TypedNode + ?Sized>:
   Iterator<Item = (NodeIndex, Self::Source)>
 {
   type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
@@ -877,7 +877,7 @@ pub trait SourceIterator<T: TypedNode>:
 }
 
 /// A struct to hold errors found in link type check
-pub struct LinkTypeError<NodeT: NodeEnum> {
+pub struct LinkTypeError<NodeT: NodeEnum + ?Sized> {
   pub link: NodeT::LinkMirrorEnum,
   pub expect: &'static [NodeT::NodeTypeMirror],
   pub found: NodeT::NodeTypeMirror,

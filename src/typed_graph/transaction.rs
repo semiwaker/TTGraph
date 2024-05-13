@@ -446,3 +446,11 @@ impl<'a, NodeT: NodeEnum + Debug> Debug for Transaction<'a, NodeT> {
       .finish()
   }
 }
+
+impl<'a, NodeT: NodeEnum> Extend<NodeT> for Transaction<'a, NodeT> {
+  fn extend<T: IntoIterator<Item = NodeT>>(&mut self, iter: T) {
+    for x in iter {
+      self.insert(x);
+    }
+  }
+}

@@ -124,6 +124,9 @@ where
   fn next(&mut self) -> Option<Self::Item> {
     self.0.next().and_then(|(idx, data)| Some((*idx, data)))
   }
+  fn size_hint(&self) -> (usize, Option<usize>) {
+    self.0.size_hint()
+  }
 }
 impl<'a, K, V> FusedIterator for Iter<'a, K, V>
 where
@@ -136,9 +139,6 @@ where
   K: ArenaIndex,
   V: 'a,
 {
-  fn len(&self) -> usize {
-    self.0.len()
-  }
 }
 #[derive(Debug)]
 pub struct IntoIter<K, V>(btree_map::IntoIter<K, V>)
@@ -153,9 +153,13 @@ where
   fn next(&mut self) -> Option<Self::Item> {
     self.0.next()
   }
+  fn size_hint(&self) -> (usize, Option<usize>) {
+    self.0.size_hint()
+  }
 }
 
 impl<K, V> FusedIterator for IntoIter<K, V> where K: ArenaIndex {}
+impl<K, V> ExactSizeIterator for IntoIter<K, V> where K: ArenaIndex {}
 
 #[derive(Debug)]
 pub struct IterMut<'a, K, V>(btree_map::IterMut<'a, K, V>)
@@ -172,9 +176,18 @@ where
   fn next(&mut self) -> Option<Self::Item> {
     self.0.next().and_then(|(idx, data)| Some((*idx, data)))
   }
+  fn size_hint(&self) -> (usize, Option<usize>) {
+    self.0.size_hint()
+  }
 }
 
 impl<'a, K, V> FusedIterator for IterMut<'a, K, V>
+where
+  V: 'a,
+  K: ArenaIndex,
+{
+}
+impl<'a, K, V> ExactSizeIterator for IterMut<'a, K, V>
 where
   V: 'a,
   K: ArenaIndex,

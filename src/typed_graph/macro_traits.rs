@@ -19,9 +19,27 @@ use super::*;
 ///   // ...
 /// }
 /// ```
-pub trait TypedNode: Sized {
-  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
-  type LinkMirror: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
+pub trait TypedNode {
+  type Source: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + Sized
+    + 'static;
+  type LinkMirror: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + Sized
+    + 'static;
   type Iter: SourceIterator<Self, Source = Self::Source>;
 
   /// Iterate the links and its source reflection
@@ -87,7 +105,7 @@ pub trait TypedNode: Sized {
 ///   }
 /// }
 /// ```
-pub trait NodeEnum: Sized {
+pub trait NodeEnum {
   type SourceEnum: Copy
     + Clone
     + Eq
@@ -96,6 +114,7 @@ pub trait NodeEnum: Sized {
     + Hash
     + PartialOrd
     + Ord
+    + Sized
     + 'static;
   type LinkMirrorEnum: Copy
     + Clone
@@ -105,6 +124,7 @@ pub trait NodeEnum: Sized {
     + Hash
     + PartialOrd
     + Ord
+    + Sized
     + 'static;
   type NodeTypeMirror: Copy
     + Clone
@@ -114,6 +134,7 @@ pub trait NodeEnum: Sized {
     + Hash
     + PartialOrd
     + Ord
+    + Sized
     + 'static;
   fn get_node_type_mirror(&self) -> Self::NodeTypeMirror;
   /// Iterate the links and its source reflection
