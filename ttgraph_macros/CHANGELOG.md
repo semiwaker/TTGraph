@@ -5,13 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.3.0 (2024-09-20)
 
 ### Documentation
 
  - <csr-id-3894c931d8e56ea98d9ff938ba56beaa4e31516d/> write changelog
  - <csr-id-52658bc9f9e78627ae01ae66730d8cb21f7cd3a4/> write changelog
  - <csr-id-bc64c8abad6309cb9f483c8185cd6b6e7b2a00ef/> write changelog
+ - <csr-id-0384c53d252dfe83267b66c5f2dde0125227ad87/> write_changelog
 
 ### New Features
 
@@ -21,9 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 139 days passed between releases.
- - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
 ### Commit Details
@@ -33,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Write_changelog ([`0384c53`](https://github.com/semiwaker/TTGraph/commit/0384c53d252dfe83267b66c5f2dde0125227ad87))
     - Write changelog ([`bc64c8a`](https://github.com/semiwaker/TTGraph/commit/bc64c8abad6309cb9f483c8185cd6b6e7b2a00ef))
     - Write changelog ([`52658bc`](https://github.com/semiwaker/TTGraph/commit/52658bc9f9e78627ae01ae66730d8cb21f7cd3a4))
     - Write changelog ([`3894c93`](https://github.com/semiwaker/TTGraph/commit/3894c931d8e56ea98d9ff938ba56beaa4e31516d))
