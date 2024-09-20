@@ -1,8 +1,8 @@
 # TTGraph README
 
-TTGraph is: 
+TTGraph is:
 
-+ A container or database for many different data, which cross-reference each other, forming a graph-like data structure. 
++ A container or database for many different data, which cross-reference each other, forming a graph-like data structure.
 + **Typed graph:** A collection of multiple types of nodes. Each node hold some private data, and some pointers/edges/references to other nodes.
 + **Transactional graph:** All operations on the graph are organized by transaction, which means an atomic group of operation is applied at the same time.
 
@@ -11,7 +11,7 @@ TTGraph provides:
 + A convinient container for different types of data, which provides some useful methods to deal with types.
 + A data struct to maintain the connection between nodes. TTGraph create a reflection for all types to track the connection between nodes, named as *link*. This allows some fancy operations, such as redirect links and maintain bidirectional links.
 + A clean interface to help get rid of some annoying compile errors. The design of transaction tries to prevent having a non-mutable reference and a mutable reference of the same object at the same time, and tries not to get into a maze of lifetimes.
-+ TTGraph is originally designed as an Intermediate Representation system for compilers, but its potential is not limited. 
++ TTGraph is originally designed as an Intermediate Representation system for compilers, but its potential is not limited.
 
 TTGraph does **not** currently provides, but may be improved in the future:
 
@@ -48,7 +48,7 @@ struct ProductNode{
 }
 ```
 
-Here, a factory have a name, multiple workers and products. `name` is a **data field**, which TTGraph does not care about. It can be any type in Rust. 
+Here, a factory have a name, multiple workers and products. `name` is a **data field**, which TTGraph does not care about. It can be any type in Rust.
 
 `workers` and `products` are **links**. A link is a connection to another node. TTGraph use `NodeIndex` to index a node, which impls `Copy`. If field is one of the following types, it is treated as a link. (Note: types are matched by name in the macros, `tgraph::NodeIndex`/`NodeIndex`/`std::collections::Vec::<NodeIndex>`/`Vec::<tgraph::NodeIndex>` are all acceptable.)
 
@@ -59,7 +59,7 @@ Here, a factory have a name, multiple workers and products. `name` is a **data f
 
 ### Graph and Transaction
 
-Next example shows how to build a graph. 
+Next example shows how to build a graph.
 
 ```rust
 // Use an node_enum to collect all node types together
@@ -167,6 +167,7 @@ trans.fill_back(worker2, Node::Worker(WorkerNode{
 ```
 
 Finally, after committing the transaction to the graph, we have a graph with the nodes described above. We can use `NodeIndex` to get the node back. `get_node!` macro is used when the type of the node is previously known, which returns an `Option<&TypedNode>` to indicate if the node is avaiable.
+
 ```rust
 let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
 assert_eq!(factory_node.name, "Factory");
@@ -239,12 +240,11 @@ Rules of bidiretional links are:
 + `Set<NodeIndex>` field: link can always be added into or removed from the set.
 + When modifying existing pairs of bidiretional links, ensure the modification happens in the same transaction to prevent conflict. TTGraph does all other operations before maintaining bidiretional links.
 
-
 ### Get data by name and group
 
-TTGraph supports few operations for type erasure, targeting cases that some typed nodes have some similar fields, and matching the enum for these field is verbose. 
+TTGraph supports few operations for type erasure, targeting cases that some typed nodes have some similar fields, and matching the enum for these field is verbose.
 
-Following last example, assume there are two types of workers, robots and humans. They may have very different data, but they both have a name. Now we want to make a name list for all the workers. Typical solution is to match the NodeEnum, but TTGraph gives another solution by getting data by name. 
+Following last example, assume there are two types of workers, robots and humans. They may have very different data, but they both have a name. Now we want to make a name list for all the workers. Typical solution is to match the NodeEnum, but TTGraph gives another solution by getting data by name.
 
 `data_ref_by_name::<Type>::(&'static str name) -> Option<&Type>` method provides an interface to access a data field by its name. If the node have that field and the type matches (through `std::any::Any::downcast_ref`), `Some(&Type)` is returned, otherwise `None` is returned.
 
@@ -292,7 +292,7 @@ Further more, if we want to iterate all workers, skipping all the other nodes, t
 
 Here, the two variant `Human` and `Robot` is in the `worker` group. Use the `iter_group(&'static str)` method to iterate all nodes within the group.
 
-Notes: 
+Notes:
 
 + Variants can be inside of multiple or none groups.
 + Currently, this method does not provide performance enhancement, as it is only a wrapper on matching the variants according to the group name.
@@ -318,6 +318,7 @@ for (idx, node) in graph.iter_group("worker") {
 Links may be grouped too. Assume workers may produce different kinds of products, and make them into a `product` group can help iterate through all of them.
 
 Notes:
+
 + A link field can be inside multiple or none groups. Syntax: `#[group(group1, group2, ...)]`
 + Yes, its form is inconsitent with `node_enum!`. The problem is if a struct is inside a macro, the linter (rust-analyzer) fails to show its content. The author personally thinks the `group!` form is more elegent, but does not worth ruining the linter.
 
@@ -352,8 +353,6 @@ Other methods for type erasure are listed in the document of `NodeEnum` and `Typ
 A node links to other node with a `NodeIndex` in TTGraph, which is in fact weak typed as any variant in the node enum can be pointed by the NodeIndex.
 
 For debug reason, an optional link type check can be added with `link_type!{ #var.#field : #var, ... }`. When a transaction is committed, all changes which be checked. Panics if a NodeIndex points to the wrong enum variant.
-
-Link type can also be a group. *If the name of a group and the name of a variant conflicts, it is treated as a group.*
 
 Feature `debug` is required. Otherwise all checks are skipped.
 
@@ -391,6 +390,18 @@ node_enum!{
 
 In this example, workers of a factory can link to human or robot, while the factory field of human and robot must link to a factory.
 
+## Use group in `link_type!` and `bidirectional!`
+
+Groups can be used in `link_type!` and `bidirectional!`. To avoid confliction, group name should not be variant name in NodeEnum or link name in TypedNode.
+
+All `VarGroup.LinkGroup` will be expaneded into multiple `Var.Link` pairs of the group.
+
+The purpose of this feature is to greatly reduce the number of lines to describe link types and bidirectional links, especially in complex graph.
+
+If there are n types of the same type group and m links of the same link group, then one line of such description can replace n*m lines of trival description. (In bidirecitonal link description such line number is further squared)
+
+Check the document for example.
+
 ## Working In Progress
 
 + Graph creation macro. A sub-language to simplify great amount of `alloc_node`, `fill_back_node` and `new_node` calls.
@@ -412,14 +423,19 @@ In this example, workers of a factory can link to human or robot, while the fact
 
 + Link type check now reports more information.
 
+### 0.3
+
++ Allow grouping in `link_type!` and `bidirectional!`
++ Hide generated types into a generated `mod` for clearer `use`.
+
 ## License
 
 Licensed under either of
 
- * Apache License, Version 2.0
-   ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license
-   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
++ Apache License, Version 2.0
+   ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
++ MIT license
+   ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
 
 at your option.
 

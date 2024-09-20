@@ -1,10 +1,11 @@
 #![crate_type = "proc-macro"]
 
+use std::collections::BTreeMap;
 use proc_macro::TokenStream;
 // use proc_macro2;
 use proc_macro_error::*;
 use quote::ToTokens;
-use syn::{parse2, parse_macro_input, parse_quote, Fields, Item, ItemStruct, Type};
+use syn::{parse2, parse_macro_input, parse_quote, Fields, Item, ItemStruct, Type, Ident};
 
 mod node_enum;
 use node_enum::*;
@@ -80,12 +81,14 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   //     make_transaction_by_type_trait_impl(&mut result, &generics, &enumt, ident, ty);
   //   }
   // }
-  let source_enum_name = make_source_enum(&mut result, &generics, &vars, &enumt, &vis);
-  let link_mirror_enum_name =
-    make_link_mirror_enum(&mut result, &generics, &vars, &enumt, &vis);
-  let node_type_mirror_name =
-    make_node_type_mirror_enum(&mut result, &vars, &enumt, &vis);
+  let mut generated = proc_macro2::TokenStream::new();
+  let source_enum = make_source_enum(&mut generated, &generics, &vars, &enumt);
+  let link_mirror_enum = make_link_mirror_enum(&mut generated, &generics, &vars, &enumt);
+  let log_mirror_enum = make_log_mirror_enum(&mut generated, &generics, &vars, &enumt);
+  let node_type_mirror = make_node_type_mirror_enum(&mut generated, &vars, &enumt);
 
+  let gen_mod = make_generated_mod(&mut result, generated, &enumt, &vis);
+  
   let mut bidirectional_links = Vec::new();
   let mut groups = Vec::new();
   let mut type_annotations = Vec::new();
@@ -96,9 +99,6 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
           get_bidirectional_links(the_macro.mac.tokens.clone(), &mut bidirectional_links)
         {
           emit_error!(err.span(), "{}", err);
-        }
-        if let Err((pos, err)) = check_bidirectional_links(&vars, &bidirectional_links) {
-          emit_error!(pos, "{}", err);
         }
       } else if the_macro.mac.path.is_ident("group") {
         let result: syn::Result<NamedGroupVec> = parse2(the_macro.mac.tokens.clone());
@@ -124,17 +124,23 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
     }
   }
 
+  check_bidirectional_links(&vars, &bidirectional_links, &groups);
+  abort_if_dirty();
+
+  let bidirectional_links = expand_bidirectional_links(bidirectional_links, &groups);
   make_node_enum(
     &mut result,
     &generics,
     &vars,
     &enumt,
-    &source_enum_name,
-    &link_mirror_enum_name,
-    &node_type_mirror_name,
+    &source_enum,
+    &link_mirror_enum,
+    &log_mirror_enum,
+    &node_type_mirror,
+    &gen_mod,
     &bidirectional_links,
     &groups,
-    &type_annotations,
+    type_annotations,
   );
 
   result.into()
@@ -155,6 +161,7 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
   let mut links = Vec::new();
   let mut data = Vec::new();
   let mut groups = Vec::new();
+  let mut group_map: BTreeMap<Ident, Vec<Ident>> = BTreeMap::new();
   let direct_paths = vec![parse_quote!(ttgraph::NodeIndex), parse_quote!(NodeIndex)];
   let mut hset_paths = Vec::new();
   let mut bset_paths = Vec::new();
@@ -210,6 +217,9 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
         if !is_link {
           emit_error!(attr, "Can not group a non-link field!");
         } else {
+          for g in &cur_group {
+            group_map.entry(g.clone()).or_default().push(ident.clone());
+          }
           groups.push(cur_group);
         }
         have_group = true;
@@ -222,23 +232,28 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
   }
   if links.is_empty() {
     links.push(LinkType::Empty);
+    groups.push(Vec::new());
   }
 
   let mut result = proc_macro2::TokenStream::new();
+  let mut generated = proc_macro2::TokenStream::new();
 
-  let source_enum = make_node_source_enum(&mut result, &links, &name, &vis);
-  let link_mirror = make_link_mirror(&mut result, &links, &name, &vis);
+  let source_enum = make_node_source_enum(&mut generated, &links, &name,);
+  let link_mirror = make_link_mirror(&mut generated, &links, &name, );
+  let log_mirror = make_log_mirror(&mut generated, &links, &group_map, &name);
+
+  let gen_mod = make_generated_mod(&mut result, generated, &name, &vis);
   make_typed_node(
     &links,
     &data,
     &groups,
     &name,
-    &vis,
     &generics,
+    &gen_mod,
     &source_enum,
     &link_mirror,
-  )
-  .to_tokens(&mut result);
+    &log_mirror,
+  ).to_tokens(&mut result);
 
   result.into()
 }

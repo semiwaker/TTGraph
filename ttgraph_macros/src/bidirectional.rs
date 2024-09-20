@@ -1,14 +1,17 @@
-use std::collections::{btree_map, BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use proc_macro2::TokenStream;
+use proc_macro_error::emit_error;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::{self, custom_punctuation, parse2, Ident, Token, Type};
 
 use crate::utils::*;
+use crate::NamedGroup;
 
 custom_punctuation!(BidirectionalSep, <->);
 
+#[derive(Clone, Debug)]
 pub(crate) struct BidirectionalLink {
   pub var1: Ident,
   pub link1: Ident,
@@ -52,18 +55,45 @@ pub(crate) fn get_bidirectional_links(
 }
 
 pub(crate) fn check_bidirectional_links(
-  vars: &[(Ident, Type)], links: &Vec<BidirectionalLink>,
-) -> Result<(), (Ident, &'static str)> {
-  let vars = BTreeSet::from_iter(vars.iter().map(|(ident, _)| ident.clone()));
+  vars: &[(Ident, Type)], links: &[BidirectionalLink], groups: &[NamedGroup]
+) {
+  let mut vars = BTreeSet::from_iter(vars.iter().map(|(ident, _)| ident.clone()));
+  vars.extend(groups.iter().map(|x|x.name.clone()));
   for l in links {
     if !vars.contains(&l.var1) {
-      return Err((l.var1.clone(), "Unknown identifier, not a variant of the NodeEnum"));
+      emit_error!(l.var1, "Unknown identifier, not a variant of the NodeEnum");
     }
     if !vars.contains(&l.var2) {
-      return Err((l.var2.clone(), "Unknown identifier, not a variant of the NodeEnum"));
+      emit_error!(l.var2, "Unknown identifier, not a variant of the NodeEnum");
     }
   }
-  Ok(())
+}
+
+
+pub(crate) fn expand_bidirectional_links(
+  links: Vec<BidirectionalLink>, groups: &[NamedGroup]
+) -> Vec<BidirectionalLink> {
+  let mut result = Vec::new();
+  let groups = BTreeMap::from_iter(groups.iter().map(|x|(x.name.clone(), x.idents.clone())));
+  for l in links {
+    let var1 = if let Some(g) = groups.get(&l.var1) {
+      g.clone()
+    } else {
+      vec![l.var1]
+    };
+    let var2 = if let Some(g) = groups.get(&l.var2) {
+      g.clone()
+    } else {
+      vec![l.var2]
+    };
+
+    for v1 in var1 {
+      for v2 in &var2 {
+        result.push(BidirectionalLink { var1: v1.clone(), link1: l.link1.clone(), var2: v2.clone(), link2:l.link2.clone() });
+      }
+    }
+  }
+  result
 }
 
 pub(crate) fn make_bidirectional_link(
@@ -94,24 +124,24 @@ pub(crate) fn make_bidirectional_link(
 
   let mut link_mirrors_of_arms = Vec::new();
   for (var, ty) in vars {
-    if let btree_map::Entry::Occupied(v) = b_links.entry(var.clone()) {
+    if let Some(v) = b_links.get(var) {
       let mut arms = Vec::new();
-      for (link, to) in v.get() {
+      for (link, to) in v {
         let camel = upper_camel(link);
         let mut possible_links = Vec::new();
         for (var2, link2) in to {
           let var2_ty = &ty_map[var2];
           let link2_camel = upper_camel(link2);
           possible_links.push(quote!{
-              Self::LinkMirrorEnum::#var2(<#var2_ty as ttgraph::TypedNode>::LinkMirror::#link2_camel)
+              Self::LoGMirrorEnum::#var2(<#var2_ty as ttgraph::TypedNode>::LoGMirror::#link2_camel)
             });
         }
         arms.push(quote! {
-          <#ty as ttgraph::TypedNode>::LinkMirror::#camel => vec![#(#possible_links),*],
+          <#ty as ttgraph::TypedNode>::LoGMirror::#camel => [#(#possible_links),*].into_iter().flat_map(|l|Self::expand_link_groups(l)).collect(),
         });
       }
       link_mirrors_of_arms.push(quote! {
-        Self::LinkMirrorEnum::#var(l) => {
+        Self::LoGMirrorEnum::#var(l) => {
           match l {
             #(#arms)*
             _ => vec![],
@@ -123,21 +153,18 @@ pub(crate) fn make_bidirectional_link(
 
   let mut links_arms = Vec::new();
   for (var, ty) in vars {
-    if let btree_map::Entry::Occupied(v) = b_links.entry(var.clone()) {
-      let mut vecs = Vec::new();
-      for link in v.get().keys() {
+    if let Some(v) = b_links.get(var) {
+      let mut logs = Vec::new();
+      for link in v.keys() {
         let camel = upper_camel(link);
-        vecs.push(quote!{
-            (
-              Vec::from_iter(self.iter_links(Self::LinkMirrorEnum::#var(<#ty as ttgraph::TypedNode>::LinkMirror::#camel))),
-              self.get_bidiretional_link_mirrors_of(Self::LinkMirrorEnum::#var(<#ty as ttgraph::TypedNode>::LinkMirror::#camel)),
-            ),
-          })
+        logs.push(quote!{Self::LoGMirrorEnum::#var(<#ty as ttgraph::TypedNode>::LoGMirror::#camel)});
       }
 
       links_arms.push(quote! {
         Self::#var(x) => {
-          vec![#(#vecs)*]
+          [#(#logs),*].into_iter().flat_map(|x|Self::expand_link_groups(x)).map(|x|
+            (Vec::from_iter(self.iter_links(x)), self.get_bidiretional_link_mirrors_of(x))
+          ).collect()
         },
       });
     }
@@ -150,7 +177,8 @@ pub(crate) fn make_bidirectional_link(
         _ => vec![],
       }
     }
-    fn get_bidiretional_link_mirrors_of(&self, link: Self::LinkMirrorEnum) -> Vec<Self::LinkMirrorEnum> {
+
+    fn get_bidiretional_link_mirrors_of_log(&self, link: Self::LoGMirrorEnum) -> Vec<Self::LinkMirrorEnum> {
       match link {
         #(#link_mirrors_of_arms)*
         _ => vec![],

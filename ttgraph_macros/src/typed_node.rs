@@ -1,8 +1,11 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
-use syn::{Generics, Ident, TypePath, Visibility};
+use syn::{Generics, Ident, TypePath};
+
+use std::collections::BTreeMap;
 
 use super::group::*;
+use super::upper_camel;
 
 #[derive(Debug, Clone)]
 pub(crate) enum LinkType {
@@ -14,7 +17,7 @@ pub(crate) enum LinkType {
 }
 
 pub(crate) fn make_node_source_enum(
-  result: &mut TokenStream, links: &Vec<LinkType>, name: &Ident, vis: &Visibility,
+  result: &mut TokenStream, links: &Vec<LinkType>, name: &Ident, 
 ) -> Ident {
   let source_enum = format_ident!("{}Source", name);
   let link_mirror = format_ident!("{}LinkMirror", name);
@@ -43,7 +46,7 @@ pub(crate) fn make_node_source_enum(
 
   quote! {
     #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-    #vis enum #source_enum{
+    pub enum #source_enum{
       #(#vars),*
     }
 
@@ -61,7 +64,7 @@ pub(crate) fn make_node_source_enum(
 }
 
 pub(crate) fn make_link_mirror(
-  result: &mut TokenStream, links: &Vec<LinkType>, name: &Ident, vis: &Visibility,
+  result: &mut TokenStream, links: &Vec<LinkType>, name: &Ident, 
 ) -> Ident {
   let source_enum = format_ident!("{}Source", name);
   let link_mirror = format_ident!("{}LinkMirror", name);
@@ -90,7 +93,7 @@ pub(crate) fn make_link_mirror(
 
   quote! {
     #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-    #vis enum #link_mirror{
+    pub enum #link_mirror{
       #(#vars),*
     }
 
@@ -107,35 +110,89 @@ pub(crate) fn make_link_mirror(
   link_mirror
 }
 
+pub(crate) fn make_log_mirror(
+  result: &mut TokenStream, links: &Vec<LinkType>, group_map: &BTreeMap<Ident, Vec<Ident>>, name: &Ident, 
+) -> Ident {
+  let link_mirror = format_ident!("{}LinkMirror", name);
+  let log_mirror = format_ident!("{}LoGMirror", name);
+  let mut vars = Vec::new();
+  let mut to_link_arms = Vec::new();
+  for s in links {
+    vars.push(match &s {
+      LinkType::Direct(_, camel) => quote! {#camel},
+      LinkType::HSet(_, camel) => quote! {#camel},
+      LinkType::BSet(_, camel) => quote! {#camel},
+      LinkType::Vec(_, camel) => quote! {#camel},
+      // LinkType::Enum(_, camel) => vars.push(quote! {#camel}),
+      LinkType::Empty => quote! {Empty},
+    });
+    to_link_arms.push(match &s {
+      LinkType::Direct(_, camel) => quote! {Self::#camel => &[#link_mirror::#camel],},
+      LinkType::HSet(_, camel) => quote! {Self::#camel => &[#link_mirror::#camel],},
+      LinkType::BSet(_, camel) => quote! {Self::#camel => &[#link_mirror::#camel],},
+      LinkType::Vec(_, camel) => quote! {Self::#camel => &[#link_mirror::#camel],},
+      LinkType::Empty => quote! {Self::Empty => &[#link_mirror::Empty],},
+    });
+  }
+  for (g, v) in group_map {
+    let camel = upper_camel(g);
+    let mut links = Vec::new();
+    for i in v {
+      let c = upper_camel(i);
+      links.push(quote!{#link_mirror::#c});
+    }
+    vars.push(quote!{ #camel });
+    to_link_arms.push( quote!{ Self::#camel => &[#(#links),*], });
+  }
+
+  quote! {
+    #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum #log_mirror{
+      #(#vars),*
+    }
+
+    impl #log_mirror{
+      pub fn to_links(self) -> &'static [#link_mirror] {
+        match self {
+          #(#to_link_arms)*
+        }
+      }
+    }
+  }
+  .to_tokens(result);
+
+  log_mirror
+}
+
 pub(crate) fn make_typed_node(
   links: &[LinkType], data: &[(Ident, TypePath)], groups: &[Vec<Ident>], name: &Ident,
-  vis: &Visibility, generics: &Generics, source_enum: &Ident, link_mirror: &Ident,
+  generics: &Generics, gen_mod: &Ident, source_enum: &Ident, link_mirror: &Ident, log_mirror: &Ident,
 ) -> TokenStream {
-  let iterator_ident = format_ident!("{}SourceIterator", name);
-  let mut add_source_ops = Vec::new();
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+  let mut add_source_ops = Vec::new();
 
   // Add all sources into a vec for SourceIterator
   for s in links {
     match s {
       LinkType::Direct(ident, camel) => add_source_ops.push(quote! {
-        if !node.#ident.is_empty() {
-          sources.push((node.#ident, #source_enum::#camel));
+        if !self.#ident.is_empty() {
+          sources.push((self.#ident, <#name as ttgraph::TypedNode>::Source::#camel));
         }
       }),
       LinkType::HSet(ident, camel) => add_source_ops.push(quote! {
-        for i in node.#ident.iter() {
-          sources.push((*i, #source_enum::#camel));
+        for i in self.#ident.iter() {
+          sources.push((*i, <#name as ttgraph::TypedNode>::Source::#camel));
         }
       }),
       LinkType::BSet(ident, camel) => add_source_ops.push(quote! {
-        for i in node.#ident.iter() {
-          sources.push((*i, #source_enum::#camel));
+        for i in self.#ident.iter() {
+          sources.push((*i, <#name as ttgraph::TypedNode>::Source::#camel));
         }
       }),
       LinkType::Vec(ident, camel) => add_source_ops.push(quote! {
-        for (idx, i) in node.#ident.iter().enumerate() {
-          sources.push((*i, #source_enum::#camel(idx)));
+        for (idx, i) in self.#ident.iter().enumerate() {
+          sources.push((*i, <#name as ttgraph::TypedNode>::Source::#camel(idx)));
         }
       }),
       LinkType::Empty => {},
@@ -303,10 +360,10 @@ pub(crate) fn make_typed_node(
   let mut link_mirror_vec = Vec::new();
   for s in links {
     match s {
-      LinkType::Direct(_, camel) => link_mirror_vec.push(quote! {#link_mirror::#camel}),
-      LinkType::HSet(_, camel) => link_mirror_vec.push(quote! {#link_mirror::#camel}),
-      LinkType::BSet(_, camel) => link_mirror_vec.push(quote! {#link_mirror::#camel}),
-      LinkType::Vec(_, camel) => link_mirror_vec.push(quote! {#link_mirror::#camel}),
+      LinkType::Direct(_, camel) => link_mirror_vec.push(quote! {Self::LinkMirror::#camel}),
+      LinkType::HSet(_, camel) => link_mirror_vec.push(quote! {Self::LinkMirror::#camel}),
+      LinkType::BSet(_, camel) => link_mirror_vec.push(quote! {Self::LinkMirror::#camel}),
+      LinkType::Vec(_, camel) => link_mirror_vec.push(quote! {Self::LinkMirror::#camel}),
       _ => {},
     }
   }
@@ -364,37 +421,33 @@ pub(crate) fn make_typed_node(
     });
   }
 
-  quote! {
-    #vis struct #iterator_ident {
-      sources: Vec<(NodeIndex, #source_enum)>,
-      cur: usize
+  let mut to_log_arms = Vec::new();
+  for (s, gs) in links.iter().zip(groups.iter()) {
+    let mut logs = Vec::new();
+    for g in gs {
+      let c = upper_camel(g);
+      logs.push(quote!{Self::LoGMirror::#c});
     }
-    impl #impl_generics ttgraph::SourceIterator<#name #ty_generics> for #iterator_ident #where_clause{
-      type Source = #source_enum;
-      fn new(node: &#name #ty_generics) -> Self{
+    to_log_arms.push(
+      match s {
+        LinkType::Direct(_, camel) => quote!{Self::LinkMirror::#camel => &[Self::LoGMirror::#camel, #(#logs),*], },
+        LinkType::HSet(_, camel) => quote!{Self::LinkMirror::#camel => &[Self::LoGMirror::#camel, #(#logs),*], },
+        LinkType::BSet(_, camel) => quote!{Self::LinkMirror::#camel => &[Self::LoGMirror::#camel, #(#logs),*], },
+        LinkType::Vec(_, camel) => quote!{Self::LinkMirror::#camel => &[Self::LoGMirror::#camel, #(#logs),*], },
+        LinkType::Empty => quote!{Self::LinkMirror::Empty => &[],}
+      }
+    )
+  }
+
+  quote! {
+    impl #impl_generics ttgraph::TypedNode for #name #ty_generics #where_clause {
+      type Source = #gen_mod::#source_enum;
+      type LinkMirror = #gen_mod::#link_mirror;
+      type LoGMirror = #gen_mod::#log_mirror;
+      fn iter_sources(&self) -> std::vec::IntoIter<(ttgraph::NodeIndex, Self::Source)>  {
         let mut sources = Vec::new();
         #(#add_source_ops)*
-        #iterator_ident{ sources, cur: 0 }
-      }
-    }
-    impl std::iter::Iterator for #iterator_ident {
-      type Item = (NodeIndex, #source_enum);
-      fn next(&mut self) -> Option<Self::Item> {
-        if self.cur == self.sources.len() {
-          None
-        } else {
-          let result = self.sources[self.cur].clone();
-          self.cur += 1;
-          Some(result)
-        }
-      }
-    }
-    impl #impl_generics ttgraph::TypedNode for #name #ty_generics #where_clause {
-      type Source = #source_enum;
-      type LinkMirror = #link_mirror;
-      type Iter = #iterator_ident;
-      fn iter_sources(&self) -> Self::Iter {
-        #iterator_ident::new(&self)
+        sources.into_iter()
       }
       fn iter_links(&self, link: Self::LinkMirror) -> Box<dyn std::iter::Iterator<Item = ttgraph::NodeIndex> + '_> {
         match link{
@@ -452,6 +505,12 @@ pub(crate) fn make_typed_node(
       }
       fn to_link_mirror(input: Self::Source) -> Self::LinkMirror {
         input.to_link_mirror()
+      }
+
+      fn to_link_or_groups(input: Self::LinkMirror) -> &'static [Self::LoGMirror] {
+        match input {
+          #(#to_log_arms)*
+        }
       }
     }
   }

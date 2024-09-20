@@ -17,6 +17,7 @@
 ///   }
 /// }
 ///
+/// # fn main() {
 /// let ctx = Context::new();
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
@@ -28,6 +29,7 @@
 /// let a = get_node!(graph, MyNodeEnum::A, x);
 /// assert!(a.is_some());
 /// assert_eq!(a.unwrap().a, 1);
+/// # }
 /// ```
 #[macro_export]
 macro_rules! get_node {
@@ -62,6 +64,7 @@ macro_rules! get_node {
 ///   }
 /// }
 ///
+/// # fn main() {
 /// let ctx = Context::new();
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
@@ -76,6 +79,7 @@ macro_rules! get_node {
 /// for (i, a) in (1..3).zip(iterator) {
 ///   assert_eq!(i, a.1.a)
 /// }
+/// # }
 /// ```
 #[macro_export]
 macro_rules! iter_nodes {
@@ -115,6 +119,7 @@ macro_rules! iter_nodes {
 ///   }
 /// }
 ///
+/// # fn main() {
 /// let ctx = Context::new();
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
@@ -132,6 +137,7 @@ macro_rules! iter_nodes {
 /// let a = get_node!(graph, MyNodeEnum::A, id);
 /// assert!(a.is_some());
 /// assert_eq!(a.unwrap().a, 2);
+/// # }
 /// ```
 #[macro_export]
 macro_rules! mut_node {
@@ -187,6 +193,7 @@ macro_rules! mut_node {
 ///   }
 /// }
 ///
+/// # fn main() {
 /// let ctx = Context::new();
 /// let mut graph = Graph::<MyNodeEnum>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
@@ -206,6 +213,7 @@ macro_rules! mut_node {
 /// let a = get_node!(graph, MyNodeEnum::A, id);
 /// assert!(a.is_some());
 /// assert_eq!(a.unwrap().a, 2);
+/// # }
 /// ```
 #[macro_export]
 macro_rules! update_node {

@@ -84,6 +84,7 @@
 //!   }
 //! }
 //!
+//! # fn main() {
 //! // Create the context
 //! let ctx = Context::new();
 //! // Create a graph of Node
@@ -120,6 +121,7 @@
 //! assert_eq!(factory_node.name, "Factory");
 //! assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
 //! assert_eq!(factory_node.products, HashSet::from([product1, product2]));
+//! # }
 //! ```
 //!
 //! First, the [`node_enum!`] macro is used to create a enum to collect all types of nodes. It is a proc_macro instead of proc_macro_derive for extendable syntax in the latter examples. The enum inside of `node_enum!` will implements trait `NodeEnum` and can be used in `Graph`.
@@ -150,6 +152,7 @@
 //!     Product(ProductNode),
 //!   }
 //! }
+//! # fn main() {}
 //! ```
 //!
 //! Then, create a [`Context`] and a [`Graph`] using that context. The context is used to ensure the NodeIndexes are consistent across all transactions. Graph does not hold a reference to the context, so it is the user's reponsibility to keep it.
@@ -180,8 +183,10 @@
 //! #     Product(ProductNode),
 //! #   }
 //! # }
+//! # fn main() {
 //! let ctx = Context::new();
 //! let mut graph = Graph::<Node>::new(&ctx);
+//! # }
 //! ```
 //!
 //! Next, a [`Transaction`] is created using the same context as the graph. After operations are done on the transcations, it can be committed to the graph with method [`commit`](Graph::commit). Transaction does not hold a reference to the graph and they have independent lifetime. (Though, it does nothing if a transaction outlives the graph)
@@ -212,11 +217,13 @@
 //! #     Product(ProductNode),
 //! #   }
 //! # }
+//! # fn main() {
 //! # let ctx = Context::new();
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! let mut trans = Transaction::new(&ctx);
 //! // Do something with trans
 //! graph.commit(trans);
+//! # }
 //! ```
 //!
 //! Now we take a closer look on how to build the graph. `Product` nodes are the simplest, it only have a id. Use [`insert`](Transaction::insert) to add a node into the transaction. It returns a [`NodeIndex`] pointing to the new node, which means later we can use `product1` and `product2` to retrieve the node from the graph.
@@ -247,12 +254,14 @@
 //! #     Product(ProductNode),
 //! #   }
 //! # }
+//! # fn main() {
 //! # let ctx = Context::new();
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
 //! let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 //! let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
 //! # graph.commit(trans);
+//! # }
 //! ```
 //!
 //! Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TTGraph does operations in transaction, we can first allocate a [`NodeIndex`] for the workers with method [`alloc`](Transaction::alloc), then fill the data back with method [`fill_back`](Transaction::fill_back). The transaction prevents dangling [`NodeIndex`] by checking all allocated nodes are filled back when committed.
@@ -283,6 +292,7 @@
 //! #     Product(ProductNode),
 //! #   }
 //! # }
+//! # fn main() {
 //! # let ctx = Context::new();
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
@@ -306,6 +316,7 @@
 //!   produced: vec![product1],
 //! }));
 //! # graph.commit(trans);
+//! # }
 //! ```
 //!
 //! Finally, after committing the transaction to the graph, we have a graph with the nodes described above. We can use [`NodeIndex`] to get the node back. [`get_node!`] macro is used when the type of the node is previously known, which returns an `Option<&TypedNode>` to indicate if the node is avaiable.
@@ -335,6 +346,7 @@
 //! #     Product(ProductNode),
 //! #   }
 //! # }
+//! # fn main() {
 //! # let ctx = Context::new();
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
@@ -362,6 +374,7 @@
 //! assert_eq!(factory_node.name, "Factory");
 //! assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
 //! assert_eq!(factory_node.products, HashSet::from([product1, product2]));
+//! # }
 //! ```
 //!
 //! For more operations, please view the documents on struct [`Graph`] and [`Transaction`].
@@ -400,6 +413,7 @@
 //!   }
 //! }
 //!
+//! # fn main() {
 //! let ctx = Context::new();
 //! let mut graph = Graph::<Node>::new(&ctx);
 //!
@@ -430,6 +444,7 @@
 //! assert_eq!(factory_node.name, "Factory");
 //! assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
 //! assert_eq!(factory_node.products, HashSet::from([product1, product2]));
+//! # }
 //! ```
 //!
 //! Here, the `bidiretional!` macro inside of [`node_enum!`] macro is used to declare bidirecitonal links.
@@ -477,6 +492,7 @@
 //!   }
 //! }
 //!
+//! # fn main() {
 //! let ctx = Context::new();
 //! let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
@@ -498,6 +514,7 @@
 //! // Here, "name" is the field's name
 //! // The "name" field is a String, so this variable is an Option<&str>
 //! let name = node.data_ref_by_name::<String>("name");
+//! # }
 //! ```
 //!
 //! Further more, if we want to iterate all workers, skipping all the other nodes, the grouping mechanism in TTGraph can come to use.
@@ -532,12 +549,14 @@
 //!   }
 //! }
 //!
+//! # fn main() {
 //! # let ctx = Context::new();
 //! # let graph = Graph::<Node>::new(&ctx);
 //! for (idx, node) in graph.iter_group("worker") {
 //!   let name = node.data_ref_by_name::<String>("name").unwrap();
 //!   // ...
 //! }
+//! # }
 //! ```
 //!
 //! Links may be grouped too. Assume workers may produce different kinds of products, and make them into a `product` group can help iterate through all of them.
@@ -572,6 +591,7 @@
 //! #     // ... other nodes
 //! #   }
 //! # }
+//! # fn main() {
 //! # let ctx = Context::new();
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
@@ -582,6 +602,7 @@
 //! for idx in node.get_links_by_group("product") {
 //!   // Now idx binds to all NodeIndex inside the product group
 //! }
+//! # }
 //! ```
 //!
 //! Other methods for type erasure are listed in the document of `NodeEnum` and `TypedNode` traits.
@@ -591,8 +612,6 @@
 //! A node links to other node with a [`NodeIndex`] in TTGraph, which is in fact weak typed as any variant in the node enum can be pointed by the NodeIndex.
 //!
 //! For debug reason, an optional link type check can be added with `link_type!{ #var.#field : #var, ... }`. When a transaction is committed, all changes which be checked. Panics if a NodeIndex points to the wrong enum variant.
-//!
-//! Link type can also be a group. *If the name of a group and the name of a variant conflicts, it is treated as a group.*
 //!
 //! Feature `debug` is required. Otherwise all checks are skipped.
 //!
@@ -626,9 +645,175 @@
 //!     Robot.factory: Factory,
 //!   }
 //! }
+//! # fn main() {}
 //! ```
 //!
 //! In this example, workers of a factory can link to human or robot, while the factory field of human and robot must link to a factory.
+//!
+//! ## Use group in `link_type!` and `bidirectional!`
+//!
+//! Groups can be used in `link_type!` and `bidirectional!`. To avoid confliction, group name should not be variant name in NodeEnum or link name in TypedNode.
+//!
+//! All `VarGroup.LinkGroup` will be expaneded into multiple `Var.Link` pairs of the group.
+//!
+//! The purpose of this feature is to greatly reduce the number of lines to describe link types and bidirectional links, especially in complex graph.
+//!
+//! If there are n types of the same type group and m links of the same link group, then one line of such description can replace n*m lines of trival description. (In bidirecitonal link description such line number is further squared)
+//!
+//! Here is a sophisticated example for to explain what this feature does.
+//!
+//! ```rust
+//! # use ttgraph::*;
+//! #[derive(TypedNode, Debug)]
+//! struct Left1 {
+//!   #[group(l1)]
+//!   g1: NodeIndex,
+//!   #[group(l2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Left2 {
+//!   #[group(l1)]
+//!   g1: NodeIndex,
+//!   #[group(l2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Left3 {
+//!   #[group(l1)]
+//!   g1: NodeIndex,
+//!   #[group(l2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Left4 {
+//!   #[group(l1)]
+//!   g1: NodeIndex,
+//!   #[group(l2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Right1 {
+//!   #[group(r1)]
+//!   g1: NodeIndex,
+//!   #[group(r2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Right2 {
+//!   #[group(r1)]
+//!   g1: NodeIndex,
+//!   #[group(r2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Right3 {
+//!   #[group(r1)]
+//!   g1: NodeIndex,
+//!   #[group(r2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct Right4 {
+//!   #[group(r1)]
+//!   g1: NodeIndex,
+//!   #[group(r2)]
+//!   g2: NodeIndex,
+//! }
+//!
+//! node_enum!{
+//!   enum LR{
+//!     Left1(Left1),
+//!     Left2(Left2),
+//!     Left3(Left3),
+//!     Left4(Left4),
+//!     Right1(Right1),
+//!     Right2(Right2),
+//!     Right3(Right3),
+//!     Right4(Right4),
+//!   }
+//!   group!{
+//!     left { Left1, Left2, Left3, Left4},
+//!     right { Right1, Right2, Right3, Right4},
+//!     LU {Left1, Left2},
+//!     LD {Left3, Left4},
+//!     RU {Right1, Right2},
+//!     RD {Right3, Right4},
+//!   }
+//!   link_type!{
+//!     left.l1: RU,
+//!     left.l2: RD,
+//!     right.r1: LU,
+//!     right.r2: LD,
+//!   }
+//!   bidirectional!{
+//!     LU.l1 <-> RU.r1,
+//!     LD.l1 <-> RU.r2,
+//!     LU.l2 <-> RD.r1,
+//!     LD.l2 <-> RD.r2,
+//!   }
+//! }
+//!
+//! # fn main() {
+//! let ctx = Context::new();
+//! let mut graph = Graph::<LR>::new(&ctx);
+//! let mut trans = Transaction::new(&ctx);
+//!
+//! let l1 = trans.alloc();
+//! let l2 = trans.alloc();
+//! let l3 = trans.alloc();
+//! let l4 = trans.alloc();
+//! let r1 = trans.alloc();
+//! let r2 = trans.alloc();
+//! let r3 = trans.alloc();
+//! let r4 = trans.alloc();
+//!
+//! trans.fill_back(l1, LR::Left1(Left1 { g1: r1, g2: r3 }));
+//! trans.fill_back(l2, LR::Left2(Left2 { g1: r2, g2: r4 }));
+//! trans.fill_back(l3, LR::Left3(Left3 { g1: r1, g2: r4 }));
+//! trans.fill_back(l4, LR::Left4(Left4 { g1: r2, g2: r3 }));
+//!
+//! trans.fill_back(r1, LR::Right1(Right1 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+//! trans.fill_back(r2, LR::Right2(Right2 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+//! trans.fill_back(r3, LR::Right3(Right3 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+//! trans.fill_back(r4, LR::Right4(Right4 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+//!
+//! graph.commit(trans);
+//!
+//! let node = get_node!(graph, LR::Left1, l1).unwrap();
+//! assert_eq!(node.g1, r1);
+//! assert_eq!(node.g2, r3);
+//! let node = get_node!(graph, LR::Left2, l2).unwrap();
+//! assert_eq!(node.g1, r2);
+//! assert_eq!(node.g2, r4);
+//! let node = get_node!(graph, LR::Left3, l3).unwrap();
+//! assert_eq!(node.g1, r1);
+//! assert_eq!(node.g2, r4);
+//! let node = get_node!(graph, LR::Left4, l4).unwrap();
+//! assert_eq!(node.g1, r2);
+//! assert_eq!(node.g2, r3);
+//!
+//! let node = get_node!(graph, LR::Right1, r1).unwrap();
+//! assert_eq!(node.g1, l1);
+//! assert_eq!(node.g2, l3);
+//! let node = get_node!(graph, LR::Right2, r2).unwrap();
+//! assert_eq!(node.g1, l2);
+//! assert_eq!(node.g2, l4);
+//! let node = get_node!(graph, LR::Right3, r3).unwrap();
+//! assert_eq!(node.g1, l1);
+//! assert_eq!(node.g2, l4);
+//! let node = get_node!(graph, LR::Right4, r4).unwrap();
+//! assert_eq!(node.g1, l2);
+//! assert_eq!(node.g2, l3);
+//! # }
+//! ```
 //!
 //! ## Working In Progress
 //!

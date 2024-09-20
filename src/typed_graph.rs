@@ -105,11 +105,13 @@ impl Display for NodeIndex {
 ///   }
 /// }
 ///
+/// # fn main() {
 /// let ctx = Context::new();
 /// let mut graph = Graph::<Node>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
 /// // Does some operations on the transaction
 /// graph.commit(trans);
+/// # }
 /// ```
 #[derive(Clone)]
 pub struct Graph<NodeT: NodeEnum> {
@@ -144,6 +146,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -161,6 +164,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// }
   ///
   /// assert!(graph.get(NodeIndex::empty()).is_none());
+  /// # }
   /// ````
   pub fn get(&self, idx: NodeIndex) -> Option<&NodeT> {
     self.nodes.get(idx)
@@ -188,6 +192,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -206,6 +211,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///     panic!();
   ///   }
   /// }
+  /// # }
   /// ```
   pub fn iter(&self) -> Iter<'_, NodeT> {
     self.nodes.iter()
@@ -249,6 +255,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   ///  let ctx = Context::new();
   ///  let mut graph = Graph::<MultiNodes>::new(&ctx);
   ///  let mut trans = Transaction::new(&ctx);
@@ -263,6 +270,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///  assert_eq!(Vec::from_iter(graph.iter_group("third").map(|(x, _)| x)), vec![a, d]);
   ///  assert_eq!(Vec::from_iter(graph.iter_group("one").map(|(x, _)| x)), vec![b]);
   ///  assert_eq!(Vec::from_iter(graph.iter_group("all").map(|(x, _)| x)), vec![a, b, c, d]);
+  /// # }
   /// ```
   pub fn iter_group(
     &self, name: &'static str,
@@ -284,6 +292,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// assert_eq!(graph.len(), 0);
@@ -293,6 +302,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// trans.insert(Node::A(NodeA{data: 1}));
   /// graph.commit(trans);
   /// assert_eq!(graph.len(), 3);
+  /// # }
   /// ```
   pub fn len(&self) -> usize {
     self.nodes.len()
@@ -328,11 +338,13 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// trans.insert(Node::A(NodeA{data: 1}));
   /// graph.commit(trans);
+  /// # }
   /// ```
   pub fn commit(&mut self, t: Transaction<NodeT>) {
     let lcr = self.do_commit(t);
@@ -868,17 +880,17 @@ impl Clone for Context {
   }
 }
 
-/// A trait intended to be used in macros
-pub trait SourceIterator<T: TypedNode + ?Sized>:
-  Iterator<Item = (NodeIndex, Self::Source)>
-{
-  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
-  fn new(node: &T) -> Self;
-}
+// /// A trait intended to be used in macros
+// pub trait SourceIterator<T: TypedNode + ?Sized>:
+//   Iterator<Item = (NodeIndex, Self::Source)>
+// {
+//   type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord;
+//   fn new(node: &T) -> Self;
+// }
 
 /// A struct to hold errors found in link type check
 pub struct LinkTypeError<NodeT: NodeEnum + ?Sized> {
-  pub link: NodeT::LinkMirrorEnum,
+  pub link: NodeT::LoGMirrorEnum,
   pub expect: &'static [NodeT::NodeTypeMirror],
   pub found: NodeT::NodeTypeMirror,
 }

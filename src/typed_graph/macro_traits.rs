@@ -40,10 +40,20 @@ pub trait TypedNode {
     + Ord
     + Sized
     + 'static;
-  type Iter: SourceIterator<Self, Source = Self::Source>;
+  type LoGMirror: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + Sized
+    + 'static;
+  // type Iter: SourceIterator<Self, Source = Self::Source>;
 
   /// Iterate the links and its source reflection
-  fn iter_sources(&self) -> Self::Iter;
+  fn iter_sources(&self) -> std::vec::IntoIter<(NodeIndex, Self::Source)>;
   /// Iterate the linked node of the specified link
   fn iter_links(
     &self, link: Self::LinkMirror,
@@ -81,6 +91,9 @@ pub trait TypedNode {
 
   /// Convert LinkMirror to Source
   fn to_link_mirror(input: Self::Source) -> Self::LinkMirror;
+
+  /// Get the groups a link belongs, include self
+  fn to_link_or_groups(input: Self::LinkMirror) -> &'static [Self::LoGMirror];
 }
 
 /// A helper trait to declare a enum of all typed nodes
@@ -104,6 +117,7 @@ pub trait TypedNode {
 ///     AnotherNodeType(B),
 ///   }
 /// }
+/// # fn main() {}
 /// ```
 pub trait NodeEnum {
   type SourceEnum: Copy
@@ -117,6 +131,16 @@ pub trait NodeEnum {
     + Sized
     + 'static;
   type LinkMirrorEnum: Copy
+    + Clone
+    + Eq
+    + PartialEq
+    + Debug
+    + Hash
+    + PartialOrd
+    + Ord
+    + Sized
+    + 'static;
+  type LoGMirrorEnum: Copy
     + Clone
     + Eq
     + PartialEq
@@ -166,11 +190,17 @@ pub trait NodeEnum {
   /// Try to get the reference of a data by name
   fn data_ref_by_name<T: Any>(&self, name: &'static str) -> Option<&T>;
 
-  /// Convert SourceEnum to LinkMirrorEnum
+  /// Convert LinkMirrorEnum to SourceEnum
   fn to_source_enum(input: Self::LinkMirrorEnum) -> Self::SourceEnum;
 
-  /// Convert LinkMirrorEnum to SourceEnum
+  /// Convert SourceEnum to LinkMirrorEnum
   fn to_link_mirror_enum(input: Self::SourceEnum) -> Self::LinkMirrorEnum;
+
+  /// Get the groups that a link mirror enum belongs, include self
+  fn to_log_mirror_enums(input: Self::LinkMirrorEnum) -> Vec<Self::LoGMirrorEnum>;
+
+  /// Get the links in a LoG
+  fn expand_link_groups(input: Self::LoGMirrorEnum) -> Vec<Self::LinkMirrorEnum>;
 
   /// Get the links that are required to be added or removed according to the bidirectional connection
   /// Returns: `(Vec<y>, Vec<link>)`, link of y should connect to this node
@@ -181,11 +211,23 @@ pub trait NodeEnum {
   /// Returns nothing if the link type does not match the node type
   fn get_bidiretional_link_mirrors_of(
     &self, link: Self::LinkMirrorEnum,
+  ) -> Vec<Self::LinkMirrorEnum> {
+    Self::to_log_mirror_enums(link).into_iter().flat_map(|x|self.get_bidiretional_link_mirrors_of_log(x)).collect()
+  }
+
+  /// Get the opposite links of the specified link or group
+  fn get_bidiretional_link_mirrors_of_log(
+    &self, link: Self::LoGMirrorEnum,
   ) -> Vec<Self::LinkMirrorEnum>;
 
-  fn check_link_type(
-    target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum,
-  ) -> LinkTypeCheckResult<Self>;
+  fn check_link_type(target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum) -> LinkTypeCheckResult<Self> {
+    for l in Self::to_log_mirror_enums(link) {
+      Self::check_link_type_by_group(target, l)?;
+    }
+    Ok(())
+  }
+
+  fn check_link_type_by_group(target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum) -> LinkTypeCheckResult<Self>;
 }
 
 pub type BidirectionalLinks<LinkMirrorT> = Vec<(Vec<NodeIndex>, Vec<LinkMirrorT>)>;

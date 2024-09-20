@@ -1,4 +1,4 @@
-use std::collections::{btree_map, BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -45,8 +45,32 @@ impl Parse for TypeAnnotationVec {
   }
 }
 
+fn expand_group(annotations: Vec<TypeAnnotation>, group_map: &BTreeMap<Ident, Vec<Ident>>) -> Vec<TypeAnnotation> {
+  let mut result = Vec::new();
+  for TypeAnnotation{var, link ,var2} in annotations {
+    let mut expanded_var2 = Vec::new();
+    for v2 in var2 {
+      if let Some(x) = group_map.get(&v2) {
+        expanded_var2.extend(x.clone());
+      } else {
+        expanded_var2.push(v2);
+      }
+    }
+
+    if let Some(x) = group_map.get(&var) {
+      for v in x {
+        result.push(TypeAnnotation{var: v.clone(), link:link.clone(), var2:expanded_var2.clone()});
+      }
+    } else {
+      result.push(TypeAnnotation{var, link ,var2: expanded_var2} );
+    }
+  }
+
+  result
+}
+
 pub(crate) fn make_check_link_type(
-  vars: &[(Ident, Type)], annotations: &[TypeAnnotation], groups: &[NamedGroup],
+  vars: &[(Ident, Type)], annotations: Vec<TypeAnnotation>, groups: &[NamedGroup],
 ) -> TokenStream {
   let mut arms = Vec::new();
   let mut anno_map: BTreeMap<Ident, BTreeSet<(Ident, Vec<Ident>)>> = BTreeMap::new();
@@ -54,31 +78,25 @@ pub(crate) fn make_check_link_type(
   for NamedGroup { name, idents } in groups {
     group_map.insert(name.clone(), idents.clone());
   }
+  let annotations = expand_group(annotations, &group_map);
   for TypeAnnotation { var, link, var2 } in annotations {
-    let camel = upper_camel(link);
-    let mut legal_types = Vec::new();
-    for v in var2 {
-      if let btree_map::Entry::Occupied(g) = group_map.entry(v.clone()) {
-        legal_types.extend(g.get().clone().into_iter());
-      } else {
-        legal_types.push(v.clone());
-      }
-    }
-    anno_map.entry(var.clone()).or_default().insert((camel, legal_types));
+    let camel = upper_camel(&link);
+    anno_map.entry(var.clone()).or_default().insert((camel, var2));
   }
   for (var, ty) in vars {
-    if let btree_map::Entry::Occupied(v) = anno_map.entry(var.clone()) {
+    if let Some(vs) = anno_map.get(var) {
       let mut link_arms = Vec::new();
-      for (link, var2) in v.get() {
+      for (link, var2) in vs {
         let mut var2_arms = Vec::new();
         let mut expect = Vec::new();
         for v2 in var2 {
-          var2_arms.push(quote! {Self::NodeTypeMirror::#v2 => Ok(()),});
+          var2_arms.push(quote! {Self::NodeTypeMirror::#v2});
           expect.push(quote! {Self::NodeTypeMirror::#v2});
         }
+
         link_arms.push(quote! {
-          <#ty as TypedNode>::LinkMirror::#link => match target {
-            #(#var2_arms)*
+          <#ty as TypedNode>::LoGMirror::#link => match target {
+            #(#var2_arms)|* => Ok(()),
             other => Err(ttgraph::LinkTypeError{
               link,
               expect: &[#(#expect),*],
@@ -87,16 +105,16 @@ pub(crate) fn make_check_link_type(
           },
         })
       }
-      arms.push(quote! {Self::LinkMirrorEnum::#var(v) => match v{
+      arms.push(quote! {Self::LoGMirrorEnum::#var(v) => match v{
         #(#link_arms)*
         _ => Ok(()),
       },});
     } else {
-      arms.push(quote! {Self::LinkMirrorEnum::#var(_) => Ok(()),});
+      arms.push(quote! {Self::LoGMirrorEnum::#var(_) => Ok(()),});
     }
   }
   quote! {
-    fn check_link_type(target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum) -> ttgraph::LinkTypeCheckResult<Self> {
+    fn check_link_type_by_group(target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum) -> ttgraph::LinkTypeCheckResult<Self> {
       match link {
         #(#arms)*
       }

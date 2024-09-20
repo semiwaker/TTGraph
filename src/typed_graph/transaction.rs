@@ -34,12 +34,14 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// // In fact Transaction::<Node>::new(), but <Node> can be inferenced when commit
   /// let mut trans = Transaction::new(&ctx);
   /// trans.insert(Node::A(NodeA{data: 1}));
   /// graph.commit(trans);
+  /// # }
   /// ```
   pub fn new(context: &Context) -> Self {
     let node_dist = Arc::clone(&context.node_dist);
@@ -73,6 +75,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -85,6 +88,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// trans.fill_back(n2, Node::A(NodeA{ last: n1, next: n3 }));
   /// trans.fill_back(n3, Node::A(NodeA{ last: n2, next: n1 }));
   /// graph.commit(trans);
+  /// # }
   /// ```
   pub fn alloc(&mut self) -> NodeIndex {
     let idx = self.inc_nodes.alloc();
@@ -112,6 +116,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -119,6 +124,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// graph.commit(trans);
   /// // Get the node back by the returned NodeIndex idx
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 1);
+  /// # }
   /// ```
   pub fn insert(&mut self, data: NodeT) -> NodeIndex {
     self.inc_nodes.insert(data)
@@ -139,6 +145,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -151,6 +158,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// graph.commit(trans);
   /// // Now the node is removed
   /// assert!(graph.get(idx).is_none());
+  /// # }
   /// ```
   pub fn remove(&mut self, node: NodeIndex) {
     if self.inc_nodes.remove(node).is_none() && !self.alloc_nodes.remove(&node) {
@@ -174,6 +182,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -190,6 +199,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// graph.commit(trans);
   /// // Now the data field of the node is 2
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 2);
+  /// }
   /// ```
   /// # Performance warning
   /// TTGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
@@ -221,6 +231,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
@@ -238,6 +249,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// });
   /// graph.commit(trans);
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 2);
+  /// # }
   /// ```
   /// # Performance warning
   /// TTGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
@@ -271,6 +283,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let context = Context::new();
   /// let mut graph = Graph::<Node>::new(&context);
   /// let mut trans = Transaction::new(&context);
@@ -296,6 +309,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// assert_eq!(get_node!(graph, Node::A, b).unwrap().tos, BTreeSet::from([a]));
   /// assert_eq!(get_node!(graph, Node::A, c).unwrap().tos, BTreeSet::from([a]));
   /// assert_eq!(get_node!(graph, Node::A, d).unwrap().tos, BTreeSet::new());
+  /// # }
   /// ```
   pub fn redirect_all_links(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
     self.redirect_all_links_vec.push((old_node, new_node));
@@ -319,6 +333,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let context = Context::new();
   /// let mut graph = Graph::<Node>::new(&context);
   /// let mut trans = Transaction::new(&context);
@@ -354,6 +369,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// assert_eq!(get_node!(graph, Node::A, b).unwrap().tos, BTreeSet::from([a]));
   /// assert_eq!(get_node!(graph, Node::A, c).unwrap().tos, BTreeSet::from([a]));
   /// assert_eq!(get_node!(graph, Node::A, d).unwrap().tos, BTreeSet::new());
+  /// # }
   /// ```
   pub fn redirect_links(&mut self, old_node: NodeIndex, new_node: NodeIndex) {
     self.redirect_links_vec.push((old_node, new_node));
@@ -373,6 +389,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx1 = Context::new();
   /// let mut graph1 = Graph::<Node>::new(&ctx1);
   /// let mut trans1 = Transaction::new(&ctx1);
@@ -397,6 +414,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// // Now graph3 have all the nodes in graph2
   /// assert!(graph3.get(n1).is_some());
   /// assert!(graph3.get(n2).is_some());
+  /// # }
   /// ```
   pub fn merge(&mut self, graph: Graph<NodeT>) {
     assert!(self.ctx_id == graph.ctx_id);
@@ -420,12 +438,14 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   ///   }
   /// }
   ///
+  /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::<Node>::new(&ctx);
   /// let idx = trans.insert(Node::A(NodeA{data: 1}));
   ///
   /// trans.give_up();
+  /// # }
   /// ```
   pub fn give_up(self) {
     drop(self);

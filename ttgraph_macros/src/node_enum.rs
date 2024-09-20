@@ -1,54 +1,76 @@
 use proc_macro2::{self, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use syn::{Generics, Ident, Type, Visibility};
+use syn::{Generics, Ident, Type};
 
 use crate::bidirectional::*;
 use crate::group::*;
 use crate::link_check::*;
 
 pub(crate) fn make_source_enum(
-  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
+  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
 ) -> Ident {
-  let source_enum_name = format_ident!("{}SourceEnum", enumt);
+  let source_enum = format_ident!("{}SourceEnum", enumt);
 
   let mut v = Vec::new();
   for (ident, ty) in vars {
-    v.push(quote! {#ident(<#ty as TypedNode>::Source),});
+    v.push(quote! {#ident(<self::super::#ty as ttgraph::TypedNode>::Source),});
   }
 
   quote! {
     #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-    #vis enum #source_enum_name #generics{
+    pub enum #source_enum #generics{
       #(#v)*
     }
   }
   .to_tokens(result);
 
-  source_enum_name
+  source_enum
 }
 
 pub(crate) fn make_link_mirror_enum(
-  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
+  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
 ) -> Ident {
-  let link_mirror_enum_name = format_ident!("{}LinkMirrorEnum", enumt);
+  let link_mirror_enum = format_ident!("{}LinkMirrorEnum", enumt);
   let mut v = Vec::new();
   for (ident, ty) in vars {
-    v.push(quote! {#ident(<#ty as TypedNode>::LinkMirror),});
+    v.push(quote! {#ident(<self::super::#ty as ttgraph::TypedNode>::LinkMirror),});
   }
 
   quote! {
     #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-    #vis enum #link_mirror_enum_name #generics{
+    pub enum #link_mirror_enum #generics{
       #(#v)*
     }
   }
   .to_tokens(result);
 
-  link_mirror_enum_name
+  link_mirror_enum
 }
 
+pub(crate) fn make_log_mirror_enum(
+  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
+) -> Ident {
+  let log_mirror_enum = format_ident!("{}LoGMirrorEnum", enumt);
+  let mut v = Vec::new();
+  for (ident, ty) in vars {
+    v.push(quote! {#ident(<self::super::#ty as ttgraph::TypedNode>::LoGMirror),});
+  }
+
+  quote! {
+    #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
+    pub enum #log_mirror_enum #generics{
+      #(#v)*
+    }
+  }
+  .to_tokens(result);
+
+  log_mirror_enum
+}
+
+
+
 pub(crate) fn make_node_type_mirror_enum(
-  result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident, vis: &Visibility,
+  result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident,
 ) -> Ident {
   let enum_name = format_ident!("{}NodeTypeMirror", enumt);
   let mut v = Vec::new();
@@ -58,7 +80,7 @@ pub(crate) fn make_node_type_mirror_enum(
 
   quote! {
     #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-    #vis enum #enum_name{
+    pub enum #enum_name{
       #(#v)*
     }
   }
@@ -69,8 +91,8 @@ pub(crate) fn make_node_type_mirror_enum(
 
 pub(crate) fn make_node_enum(
   result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
-  source_enum_name: &Ident, link_mirror_enum_name: &Ident, node_type_mirror_name: &Ident,
-  bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup], type_annotations: &[TypeAnnotation]
+  source_enum: &Ident, link_mirror_enum: &Ident, log_mirror_enum: &Ident, node_type_mirror: &Ident, gen_mod: &Ident,
+  bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup], type_annotations: Vec<TypeAnnotation>
 ) {
   let mut get_node_type_arms= Vec::new();
   for (ident, _) in vars{
@@ -187,6 +209,16 @@ pub(crate) fn make_node_enum(
       .push(quote! {Self::SourceEnum::#ident(x) => Self::LinkMirrorEnum::#ident(x.to_link_mirror()), });
   }
 
+  let mut to_log_arms = Vec::new();
+  for (ident, ty) in vars {
+    to_log_arms.push(quote! {Self::LinkMirrorEnum::#ident(x) => Vec::from_iter(<#ty as ttgraph::TypedNode>::to_link_or_groups(x).iter().map(|l|Self::LoGMirrorEnum::#ident(*l))), });
+  }
+
+  let mut expand_group_arms = Vec::new();
+  for (ident, _) in vars {
+    expand_group_arms.push(quote!{Self::LoGMirrorEnum::#ident(x) => Vec::from_iter(x.to_links().iter().map(|x|Self::LinkMirrorEnum::#ident(*x))),})
+  }
+
   let bidirectional_link = make_bidirectional_link(vars, bidirectional_links);
   let in_group = make_in_group(groups);
   let link_check = make_check_link_type(vars, type_annotations, groups);
@@ -194,9 +226,10 @@ pub(crate) fn make_node_enum(
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
   quote!{
     impl #impl_generics NodeEnum for #enumt #ty_generics #where_clause {
-      type SourceEnum = #source_enum_name #ty_generics;
-      type LinkMirrorEnum = #link_mirror_enum_name #ty_generics;
-      type NodeTypeMirror = #node_type_mirror_name;
+      type SourceEnum = #gen_mod::#source_enum #ty_generics;
+      type LinkMirrorEnum = #gen_mod::#link_mirror_enum #ty_generics;
+      type LoGMirrorEnum = #gen_mod::#log_mirror_enum #ty_generics;
+      type NodeTypeMirror = #gen_mod::#node_type_mirror;
       fn get_node_type_mirror(&self) -> Self::NodeTypeMirror {
         match self{
           #(#get_node_type_arms)*
@@ -250,15 +283,25 @@ pub(crate) fn make_node_enum(
           #(#data_ref_arms)*
         }
       }
-      
-      fn to_link_mirror_enum(input: Self::SourceEnum) -> Self::LinkMirrorEnum{
+
+      fn to_link_mirror_enum(input: Self::SourceEnum) -> Self::LinkMirrorEnum {
         match input {
           #(#to_link_arms)*
         }
       }
-      fn to_source_enum(input: Self::LinkMirrorEnum) -> Self::SourceEnum{
+      fn to_source_enum(input: Self::LinkMirrorEnum) -> Self::SourceEnum {
         match input {
           #(#to_src_arms)*
+        }
+      }
+      fn to_log_mirror_enums(input: Self::LinkMirrorEnum) -> Vec<Self::LoGMirrorEnum> {
+        match input {
+          #(#to_log_arms)*
+        }
+      }
+      fn expand_link_groups(input: Self::LoGMirrorEnum) -> Vec<Self::LinkMirrorEnum> {
+        match input {
+          #(#expand_group_arms)*
         }
       }
 

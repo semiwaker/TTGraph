@@ -5,7 +5,6 @@
 #[cfg(test)]
 mod test_bidirectional {
   use std::collections::{BTreeSet, HashSet};
-  use std::hash::Hash;
 
   use ttgraph::*;
 
@@ -889,4 +888,157 @@ mod test_bidirectional {
 
     graph.check_backlinks();
   }
+
+  #[derive(TypedNode, Debug)]
+  struct Left1 {
+    #[group(l1)]
+    g1: NodeIndex,
+    #[group(l2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Left2 {
+    #[group(l1)]
+    g1: NodeIndex,
+    #[group(l2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Left3 {
+    #[group(l1)]
+    g1: NodeIndex,
+    #[group(l2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Left4 {
+    #[group(l1)]
+    g1: NodeIndex,
+    #[group(l2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Right1 {
+    #[group(r1)]
+    g1: NodeIndex,
+    #[group(r2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Right2 {
+    #[group(r1)]
+    g1: NodeIndex,
+    #[group(r2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Right3 {
+    #[group(r1)]
+    g1: NodeIndex,
+    #[group(r2)]
+    g2: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct Right4 {
+    #[group(r1)]
+    g1: NodeIndex,
+    #[group(r2)]
+    g2: NodeIndex,
+  }
+
+  node_enum!{
+    enum LR{
+      Left1(Left1),
+      Left2(Left2),
+      Left3(Left3),
+      Left4(Left4),
+      Right1(Right1),
+      Right2(Right2),
+      Right3(Right3),
+      Right4(Right4),
+    }
+    group!{
+      left { Left1, Left2, Left3, Left4},
+      right { Right1, Right2, Right3, Right4},
+      LU {Left1, Left2},
+      LD {Left3, Left4},
+      RU {Right1, Right2},
+      RD {Right3, Right4},
+    }
+    link_type!{
+      left.l1: RU,
+      left.l2: RD,
+      right.r1: LU,
+      right.r2: LD,
+    }
+    bidirectional!{
+      LU.l1 <-> RU.r1,
+      LD.l1 <-> RU.r2,
+      LU.l2 <-> RD.r1,
+      LD.l2 <-> RD.r2,
+    }
+  }
+
+  #[test]
+  fn test_group_bidirectional() {
+    let ctx = Context::new();
+    let mut graph = Graph::<LR>::new(&ctx);
+    let mut trans = Transaction::new(&ctx);
+
+    let l1 = trans.alloc();
+    let l2 = trans.alloc();
+    let l3 = trans.alloc();
+    let l4 = trans.alloc();
+    let r1 = trans.alloc();
+    let r2 = trans.alloc();
+    let r3 = trans.alloc();
+    let r4 = trans.alloc();
+
+    trans.fill_back(l1, LR::Left1(Left1 { g1: r1, g2: r3 }));
+    trans.fill_back(l2, LR::Left2(Left2 { g1: r2, g2: r4 }));
+    trans.fill_back(l3, LR::Left3(Left3 { g1: r1, g2: r4 }));
+    trans.fill_back(l4, LR::Left4(Left4 { g1: r2, g2: r3 }));
+
+    trans.fill_back(r1, LR::Right1(Right1 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+    trans.fill_back(r2, LR::Right2(Right2 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+    trans.fill_back(r3, LR::Right3(Right3 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+    trans.fill_back(r4, LR::Right4(Right4 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+
+    graph.commit(trans);
+
+    let node = get_node!(graph, LR::Left1, l1).unwrap();
+    assert_eq!(node.g1, r1);
+    assert_eq!(node.g2, r3);
+    let node = get_node!(graph, LR::Left2, l2).unwrap();
+    assert_eq!(node.g1, r2);
+    assert_eq!(node.g2, r4);
+    let node = get_node!(graph, LR::Left3, l3).unwrap();
+    assert_eq!(node.g1, r1);
+    assert_eq!(node.g2, r4);
+    let node = get_node!(graph, LR::Left4, l4).unwrap();
+    assert_eq!(node.g1, r2);
+    assert_eq!(node.g2, r3);
+
+
+    let node = get_node!(graph, LR::Right1, r1).unwrap();
+    assert_eq!(node.g1, l1);
+    assert_eq!(node.g2, l3);
+    let node = get_node!(graph, LR::Right2, r2).unwrap();
+    assert_eq!(node.g1, l2);
+    assert_eq!(node.g2, l4);
+    let node = get_node!(graph, LR::Right3, r3).unwrap();
+    assert_eq!(node.g1, l1);
+    assert_eq!(node.g2, l4);
+    let node = get_node!(graph, LR::Right4, r4).unwrap();
+    assert_eq!(node.g1, l2);
+    assert_eq!(node.g2, l3);
+  }
+
 }

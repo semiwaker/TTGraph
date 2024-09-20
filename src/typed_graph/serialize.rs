@@ -20,6 +20,7 @@
 //!   }
 //! }
 //!
+//! # fn main() {
 //! let ctx = Context::new();
 //! let mut graph = Graph::<Node>::new(&ctx);
 //! let mut trans = Transaction::new(&ctx);
@@ -31,6 +32,7 @@
 //! let serialized = serde_json::to_string(&graph).unwrap();
 //! let deserialized: GraphSerializer<Node> = serde_json::from_str(&serialized).unwrap();
 //! let (ctx2, graph2) = deserialize_graph(deserialized);
+//! # }
 //! ```
 
 use super::*;
