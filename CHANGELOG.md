@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release over the course of 130 calendar days.
+ - 139 days passed between releases.
+ - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - BREAKING CHANGE: better grouping, hide generated types ([`f58be19`](https://github.com/semiwaker/TTGraph/commit/f58be195b7f0078fa97d5eade82c43886114aad9))
+    - BREAKING CHANGE: Removed :Sized from NodeEnum and TypedNode; Impl Extend for Transaction; Impl ExactSizedIterator for Graph iterators ([`0ec6db4`](https://github.com/semiwaker/TTGraph/commit/0ec6db49bb3379b0ab82f159edae0abe1066d6c4))
+</details>
+
 ## 0.2.3 (2024-05-03)
 
 ### New Features
