@@ -5,7 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.3.0 (2024-09-20)
+## Unreleased
+
+### New Features
+
+ - Better grouping, hide generated types ([`f58be19`](https://github.com/semiwaker/TTGraph/commit/f58be195b7f0078fa97d5eade82c43886114aad9))
 
 ### Commit Statistics
 
@@ -26,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - BREAKING CHANGE: better grouping, hide generated types ([`f58be19`](https://github.com/semiwaker/TTGraph/commit/f58be195b7f0078fa97d5eade82c43886114aad9))
     - BREAKING CHANGE: Removed :Sized from NodeEnum and TypedNode; Impl Extend for Transaction; Impl ExactSizedIterator for Graph iterators ([`0ec6db4`](https://github.com/semiwaker/TTGraph/commit/0ec6db49bb3379b0ab82f159edae0abe1066d6c4))
 </details>
+
+## 0.3.0 (2024-09-20)
 
 ## 0.2.3 (2024-05-03)
 
