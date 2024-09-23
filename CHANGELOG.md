@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.1 (2024-09-23)
+
+### New Features
+
+ - <csr-id-e4df1a6b7f0333987dee734dadd5ab5bfc2271aa/> add phantom_group
+
+### Bug Fixes
+
+ - <csr-id-b6caaadd0209b457cd92d933bcc2e30dcd1ecd41/> fixed the multiple choice problem for bidirectional link
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Fixed the multiple choice problem for bidirectional link ([`b6caaad`](https://github.com/semiwaker/TTGraph/commit/b6caaadd0209b457cd92d933bcc2e30dcd1ecd41))
+    - Add phantom_group ([`e4df1a6`](https://github.com/semiwaker/TTGraph/commit/e4df1a6b7f0333987dee734dadd5ab5bfc2271aa))
+</details>
+
 ## 0.3.0 (2024-09-20)
 
 ### New Features
