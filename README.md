@@ -435,6 +435,7 @@ Check the document for example.
 ### 0.3.1
 
 + Added `phantom_group` attribute for `TypedNode` derive.
++ Fixed the multiple choices problem for bidirectional links
 
 ## License
 
