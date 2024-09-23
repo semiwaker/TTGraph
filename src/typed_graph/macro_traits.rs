@@ -238,12 +238,10 @@ pub trait NodeEnum {
     target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum,
   ) -> LinkTypeCheckResult<Self>;
 
-  fn match_bd_link_group(&self, links: &Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum>;
+  fn match_bd_link_group(&self, links: Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum>;
 }
 
 pub type BidirectionalLinks<LinkMirrorT> = Vec<(Vec<NodeIndex>, Vec<LinkMirrorT>)>;
-
-pub type BidirectionalLinkGroup<LinkMirrorT> = (NodeIndex, Vec<LinkMirrorT>);
 
 /// The side effect of `modify_node`, intent to be used by macros
 #[StructFields(pub)]

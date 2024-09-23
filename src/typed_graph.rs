@@ -332,7 +332,12 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// + Add/Remove links due to bidirectional declaration
   /// + Check link types
   /// # Panics
-  /// Panic if the transaction and the graph have different context
+  ///
+  /// Panics if:
+  ///
+  /// + the transaction and the graph have different context
+  /// + there are multiple choices to make a bidirectional link (i.e. a.x <-> {b.y, b.z}, found a.x, don't know if b.y=x or b.z=x)
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -401,10 +406,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       back_links: BTreeMap::new(),
     };
 
-    let mut bd = BidirectionalLinkRecorder::default();
     let mut lcr = LinkChangeRecorder::default();
-    result.merge_nodes(new_nodes, &mut bd, &mut lcr);
-    result.apply_bidirectional_links(bd);
+    result.merge_nodes(new_nodes, &mut lcr);
+    result.apply_bidirectional_links(&lcr);
     result.check_link_type(&lcr);
     result
   }
@@ -455,28 +459,27 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     );
     debug_assert!(t.alloc_nodes.is_empty(), "There are unfilled allocated nodes");
 
-    let mut bd = BidirectionalLinkRecorder::default();
     let mut lcr = LinkChangeRecorder::default();
 
-    self.redirect_links_vec(t.redirect_links_vec, &mut bd, &mut lcr);
-    self.merge_nodes(t.inc_nodes, &mut bd, &mut lcr);
+    self.redirect_links_vec(t.redirect_links_vec, &mut lcr);
+    self.merge_nodes(t.inc_nodes,  &mut lcr);
     for (i, f) in t.mut_nodes {
-      self.modify_node(i, f, &mut bd, &mut lcr);
+      self.modify_node(i, f,  &mut lcr);
     }
     for (i, f) in t.update_nodes {
-      self.update_node(i, f, &mut bd, &mut lcr);
+      self.update_node(i, f,  &mut lcr);
     }
-    self.redirect_links_vec(t.redirect_all_links_vec, &mut bd, &mut lcr);
+    self.redirect_links_vec(t.redirect_all_links_vec,  &mut lcr);
     for n in &t.dec_nodes {
-      self.remove_node(*n, &mut bd, &mut lcr);
+      self.remove_node(*n,  &mut lcr);
     }
 
-    self.apply_bidirectional_links(bd);
+    self.apply_bidirectional_links(&lcr);
     lcr
   }
 
   fn merge_nodes(
-    &mut self, nodes: Arena<NodeIndex, NodeT>, bd: &mut BidirectionalLinkRecorder<NodeT>,
+    &mut self, nodes: Arena<NodeIndex, NodeT>,
     lcr: &mut LinkChangeRecorder<NodeT>,
   ) {
     for (x, n) in &nodes {
@@ -485,19 +488,14 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         lcr.add_link(x, y, NodeT::to_link_mirror_enum(s));
       }
     }
-    for (id, node) in &nodes {
-      for (ys, lms) in node.get_bidiretional_links() {
-        bd.add(id, ys, &lms);
-      }
-    }
+
     self.nodes.merge(nodes);
   }
 
   fn remove_node(
-    &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
+    &mut self, x: NodeIndex, 
     lcr: &mut LinkChangeRecorder<NodeT>,
   ) {
-    self.remove_bidirectional_link(x, bd);
     let n = self.nodes.remove(x).expect("Remove a non-existing node!");
     for (y, s) in n.iter_sources() {
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
@@ -505,16 +503,16 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     self.remove_back_links(x, &n);
     for (y, s) in self.back_links.remove(&x).unwrap() {
       self.nodes.get_mut(y).unwrap().modify_link(s, x, NodeIndex::empty());
+      lcr.remove_link(y, x, NodeT::to_link_mirror_enum(s));
     }
   }
 
   fn modify_node<F>(
-    &mut self, x: NodeIndex, f: F, bd: &mut BidirectionalLinkRecorder<NodeT>,
+    &mut self, x: NodeIndex, f: F, 
     lcr: &mut LinkChangeRecorder<NodeT>,
   ) where
     F: FnOnce(&mut NodeT),
   {
-    self.remove_bidirectional_link(x, bd);
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
       self.back_links.get_mut(&y).unwrap().remove(&(x, s));
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
@@ -522,7 +520,6 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
     f(self.nodes.get_mut(x).unwrap());
 
-    self.add_bidirectional_link(x, bd);
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
       self.back_links.get_mut(&y).unwrap().insert((x, s));
       lcr.add_link(x, y, NodeT::to_link_mirror_enum(s));
@@ -530,12 +527,11 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   fn update_node<F>(
-    &mut self, x: NodeIndex, f: F, bd: &mut BidirectionalLinkRecorder<NodeT>,
+    &mut self, x: NodeIndex, f: F, 
     lcr: &mut LinkChangeRecorder<NodeT>,
   ) where
     F: FnOnce(NodeT) -> NodeT,
   {
-    self.remove_bidirectional_link(x, bd);
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
       self.back_links.get_mut(&y).unwrap().remove(&(x, s));
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
@@ -543,34 +539,33 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
     self.nodes.update_with(x, f);
 
-    self.add_bidirectional_link(x, bd);
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
       self.back_links.get_mut(&y).unwrap().insert((x, s));
       lcr.add_link(x, y, NodeT::to_link_mirror_enum(s));
     }
   }
 
-  fn add_bidirectional_link(
-    &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
-  ) {
-    let to_add = self.nodes.get(x).unwrap().get_bidiretional_links();
-    for (ys, lms) in to_add {
-      bd.add(x, ys, &lms);
-    }
-  }
+  // fn add_bidirectional_link(
+  //   &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
+  // ) {
+  //   let to_add = self.nodes.get(x).unwrap().get_bidiretional_links();
+  //   for (ys, lms) in to_add {
+  //     bd.add(x, ys, &lms);
+  //   }
+  // }
 
-  fn remove_bidirectional_link(
-    &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
-  ) {
-    let to_remove = self.nodes.get(x).unwrap().get_bidiretional_links();
-    for (ys, lms) in to_remove {
-      bd.remove(x, ys, &lms);
-    }
-  }
+  // fn remove_bidirectional_link(
+  //   &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
+  // ) {
+  //   let to_remove = self.nodes.get(x).unwrap().get_bidiretional_links();
+  //   for (ys, lms) in to_remove {
+  //     bd.remove(x, ys, &lms);
+  //   }
+  // }
 
   fn redirect_links(
     &mut self, old_node: NodeIndex, new_node: NodeIndex,
-    bd: &mut BidirectionalLinkRecorder<NodeT>, lcr: &mut LinkChangeRecorder<NodeT>,
+     lcr: &mut LinkChangeRecorder<NodeT>,
   ) {
     let old_link = self.back_links.remove(&old_node).unwrap();
     self.back_links.insert(old_node, BTreeSet::new());
@@ -582,19 +577,17 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       // add: if (added) {new_idx} else {ttgraph::NodeIndex::empty()},
       // remove: if (removed) {old_idx} else {ttgraph::NodeIndex::empty()},
       if result.added {
-        bd.add_one(y, new_node, &result.bd_link_mirrors);
         lcr.add_link(y, new_node, NodeT::to_link_mirror_enum(s));
       }
       if result.removed {
-        bd.remove_one(y, old_node, &result.bd_link_mirrors);
-        lcr.remove_link(y, new_node, NodeT::to_link_mirror_enum(s));
+        lcr.remove_link(y, old_node, NodeT::to_link_mirror_enum(s));
       }
     }
   }
 
   fn redirect_links_vec(
     &mut self, replacements: Vec<(NodeIndex, NodeIndex)>,
-    bd: &mut BidirectionalLinkRecorder<NodeT>, lcr: &mut LinkChangeRecorder<NodeT>,
+     lcr: &mut LinkChangeRecorder<NodeT>,
   ) {
     let mut fa = BTreeMap::new();
 
@@ -620,7 +613,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         y = fa[&y];
       }
 
-      self.redirect_links(*old, x, bd, lcr);
+      self.redirect_links(*old, x, lcr);
 
       x = *new;
       while fa[&x] != y {
@@ -631,24 +624,63 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  fn apply_bidirectional_links(&mut self, bd: BidirectionalLinkRecorder<NodeT>) {
-    for (x, y, l) in bd.to_remove {
-      if self.nodes.contains(x)
-        && self.nodes.contains(y)
-        && self.nodes.get_mut(y).unwrap().remove_link(l, x)
-      {
-        self.remove_back_link(y, x, NodeT::to_source_enum(l));
+  fn apply_bidirectional_links(&mut self, lcr: &LinkChangeRecorder<NodeT>) {
+    for &(x, y, l) in &lcr.removes {
+      if !self.nodes.contains(x) || !self.nodes.contains(y) {
+        continue;
+      }
+
+      let bds = self.nodes.get(x).unwrap().get_bidiretional_link_mirrors_of(l);
+      let bds = self.nodes.get(y).unwrap().match_bd_link_group(bds);
+      for link in bds {
+        if self.nodes.get_mut(y).unwrap().remove_link(link, x) {
+          self.remove_back_link(y, x, NodeT::to_source_enum(link));
+        }
       }
     }
-    for (x, y, l) in bd.to_add {
-      if self.nodes.contains(x)
-        && self.nodes.contains(y)
-        && self.nodes.get_mut(y).unwrap().add_link(l, x)
-      {
-        self.add_back_link(y, x, NodeT::to_source_enum(l));
+
+    for &(x, y, l) in &lcr.adds {
+      if !self.nodes.contains(x) || !self.nodes.contains(y) {
+        continue;
+      }
+
+      let bds = self.nodes.get(x).unwrap().get_bidiretional_link_mirrors_of(l);
+      let bds = self.nodes.get(y).unwrap().match_bd_link_group(bds);
+      if bds.is_empty() {
+        continue;
+      }
+
+      let node = self.nodes.get(y).unwrap();
+      let found = bds.iter().flat_map(|link|node.iter_links(*link)).find(|z|*z==x).is_some();
+
+      if !found {
+        assert!(bds.len()==1, "Node with multiple choices for bidiretional link detected!");
+        let link = bds.first().unwrap();
+        if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
+          self.add_back_link(y, x, NodeT::to_source_enum(*link));
+        }
       }
     }
   }
+
+  // fn apply_bidirectional_links(&mut self, bd: BidirectionalLinkRecorder<NodeT>) {
+  //   for (x, y, l) in bd.to_remove {
+  //     if self.nodes.contains(x)
+  //       && self.nodes.contains(y)
+  //       && self.nodes.get_mut(y).unwrap().remove_link(l, x)
+  //     {
+  //       self.remove_back_link(y, x, NodeT::to_source_enum(l));
+  //     }
+  //   }
+  //   for (x, y, l) in bd.to_add {
+  //     if self.nodes.contains(x)
+  //       && self.nodes.contains(y)
+  //       && self.nodes.get_mut(y).unwrap().add_link(l, x)
+  //     {
+  //       self.add_back_link(y, x, NodeT::to_source_enum(l));
+  //     }
+  //   }
+  // }
 
   fn add_back_link(&mut self, x: NodeIndex, y: NodeIndex, src: NodeT::SourceEnum) {
     self.back_links.entry(y).or_default().insert((x, src));
@@ -726,63 +758,62 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     for (idx, node) in nodes {
       arena.fill_back(idx, node);
     }
-    let mut bd = BidirectionalLinkRecorder::default();
     let mut lcr = LinkChangeRecorder::default();
     let mut graph = Self::new(ctx);
-    graph.merge_nodes(arena, &mut bd, &mut lcr);
-    graph.apply_bidirectional_links(bd);
+    graph.merge_nodes(arena, &mut lcr);
+    graph.apply_bidirectional_links(&lcr);
     graph
   }
 }
 
-// Helper struct to record link changes for bidiretional links
-struct BidirectionalLinkRecorder<NodeT: NodeEnum> {
-  to_add: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
-  to_remove: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
-}
-impl<NodeT: NodeEnum> BidirectionalLinkRecorder<NodeT> {
-  fn add_one(&mut self, x: NodeIndex, y: NodeIndex, lms: &Vec<NodeT::LinkMirrorEnum>) {
-    for l in lms {
-      if self.to_remove.contains(&(x, y, *l)) {
-        self.to_remove.remove(&(x, y, *l));
-      } else {
-        self.to_add.insert((x, y, *l));
-      }
-    }
-  }
+// // Helper struct to record link changes for bidiretional links
+// struct BidirectionalLinkRecorder<NodeT: NodeEnum> {
+//   to_add: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
+//   to_remove: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
+// }
+// impl<NodeT: NodeEnum> BidirectionalLinkRecorder<NodeT> {
+//   fn add_one(&mut self, x: NodeIndex, y: NodeIndex, lms: &Vec<NodeT::LinkMirrorEnum>) {
+//     for l in lms {
+//       if self.to_remove.contains(&(x, y, *l)) {
+//         self.to_remove.remove(&(x, y, *l));
+//       } else {
+//         self.to_add.insert((x, y, *l));
+//       }
+//     }
+//   }
 
-  fn add(&mut self, x: NodeIndex, ys: Vec<NodeIndex>, lms: &Vec<NodeT::LinkMirrorEnum>) {
-    for y in ys {
-      self.add_one(x, y, lms)
-    }
-  }
+//   fn add(&mut self, x: NodeIndex, ys: Vec<NodeIndex>, lms: &Vec<NodeT::LinkMirrorEnum>) {
+//     for y in ys {
+//       self.add_one(x, y, lms)
+//     }
+//   }
 
-  fn remove_one(&mut self, x: NodeIndex, y: NodeIndex, lms: &Vec<NodeT::LinkMirrorEnum>) {
-    for l in lms {
-      if self.to_add.contains(&(x, y, *l)) {
-        self.to_add.remove(&(x, y, *l));
-      } else {
-        self.to_remove.insert((x, y, *l));
-      }
-    }
-  }
+//   fn remove_one(&mut self, x: NodeIndex, y: NodeIndex, lms: &Vec<NodeT::LinkMirrorEnum>) {
+//     for l in lms {
+//       if self.to_add.contains(&(x, y, *l)) {
+//         self.to_add.remove(&(x, y, *l));
+//       } else {
+//         self.to_remove.insert((x, y, *l));
+//       }
+//     }
+//   }
 
-  fn remove(
-    &mut self, x: NodeIndex, ys: Vec<NodeIndex>, lms: &Vec<NodeT::LinkMirrorEnum>,
-  ) {
-    for y in ys {
-      self.remove_one(x, y, lms);
-    }
-  }
-}
-impl<NodeT: NodeEnum> Default for BidirectionalLinkRecorder<NodeT> {
-  fn default() -> Self {
-    BidirectionalLinkRecorder {
-      to_add: BTreeSet::default(),
-      to_remove: BTreeSet::default(),
-    }
-  }
-}
+//   fn remove(
+//     &mut self, x: NodeIndex, ys: Vec<NodeIndex>, lms: &Vec<NodeT::LinkMirrorEnum>,
+//   ) {
+//     for y in ys {
+//       self.remove_one(x, y, lms);
+//     }
+//   }
+// }
+// impl<NodeT: NodeEnum> Default for BidirectionalLinkRecorder<NodeT> {
+//   fn default() -> Self {
+//     BidirectionalLinkRecorder {
+//       to_add: BTreeSet::default(),
+//       to_remove: BTreeSet::default(),
+//     }
+//   }
+// }
 
 struct LinkChangeRecorder<NodeT: NodeEnum> {
   adds: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,

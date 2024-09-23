@@ -854,11 +854,108 @@
 //! # fn main() {}
 //! ```
 //!
+//! ### Multiple choise behavior in bidirectional link
+//!
+//! If there are multiple choices to connect a bidirection link, TTGraph can not assume which choice is correct and would panic
+//!
+//! This example will panic, as it is unsure that whether `y.x1` or `y.x2` should be connected to `x1` or `x2`
+//!
+//! ```should_panic
+//! # use ttgraph::*;
+//! #[derive(TypedNode, Debug)]
+//! struct XNode {
+//!   y: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode, Debug)]
+//! struct YNode{
+//!   #[group(x)]
+//!   x1: NodeIndex,
+//!   #[group(x)]
+//!   x2: NodeIndex,
+//! }
+//!
+//! node_enum! {
+//!   #[derive(Debug)]
+//!   enum XYNode{
+//!     XNode(XNode),
+//!     YNode(YNode),
+//!   }
+//!   link_type!{
+//!     XNode.y: YNode,
+//!     YNode.x: XNode,
+//!   }
+//!   bidirectional!{
+//!     XNode.y <-> YNode.x
+//!   }
+//! }
+//! # fn main() {
+//! let ctx = Context::new();
+//! let mut graph = Graph::new(&ctx);
+//! let mut trans = Transaction::new(&ctx);
+//!
+//! let y = trans.insert(XYNode::YNode(YNode{x1: NodeIndex::empty(), x2: NodeIndex::empty()}));
+//! let x1 = trans.insert(XYNode::XNode(XNode{y}));
+//! let x2 = trans.insert(XYNode::XNode(XNode{y}));
+//!
+//! graph.commit(trans);
+//! # }
+//! ```
+//!
+//! On the opposite, this example will not panic, because there is only one choice for `x1.y` and `x2.y`.
+//!
+//! ```
+//! # use ttgraph::*;
+//! #[derive(TypedNode, Debug)]
+//! # struct XNode {
+//! #  y: NodeIndex,
+//! # }
+//! # #[derive(TypedNode, Debug)]
+//! # struct YNode{
+//! #   #[group(x)]
+//! #   x1: NodeIndex,
+//! #   #[group(x)]
+//! #   x2: NodeIndex,
+//! # }
+//! # node_enum! {
+//! #   #[derive(Debug)]
+//! #   enum XYNode{
+//! #     XNode(XNode),
+//! #     YNode(YNode),
+//! #   }
+//! #   link_type!{
+//! #     XNode.y: YNode,
+//! #     YNode.x: XNode,
+//! #   }
+//! #   bidirectional!{
+//! #     XNode.y <-> YNode.x
+//! #   }
+//! # }
+//! # fn main() {
+//! let ctx = Context::new();
+//! let mut graph = Graph::new(&ctx);
+//! let mut trans = Transaction::new(&ctx);
+//!
+//! let x1 = trans.insert(XYNode::XNode(XNode{y: NodeIndex::empty()}));
+//! let x2 = trans.insert(XYNode::XNode(XNode{y: NodeIndex::empty()}));
+//! let y = trans.insert(XYNode::YNode(YNode{x1, x2}));
+//!
+//! graph.commit(trans);
+//!
+//! let node = get_node!(graph, XYNode::XNode, x1).unwrap();
+//! assert_eq!(node.y, y);
+//! let node = get_node!(graph, XYNode::XNode, x2).unwrap();
+//! assert_eq!(node.y, y);
+//! let node = get_node!(graph, XYNode::YNode, y).unwrap();
+//! assert_eq!(node.x1, x1);
+//! assert_eq!(node.x2, x2);
+//! # }
+//! ```
+//!
 //! ## Working In Progress
 //!
 //! + Graph creation macro. A sub-language to simplify great amount of `alloc_node`, `fill_back_node` and `new_node` calls.
 //! + Graph transition. A way to conviently transit `Graph<NodeEnumA>` to `Graph<NodeEnumB>`, if `NodeEnumA` and `NodeEnumB` have a lot of common variants.
-//! + Check when commit. A way to add runtime check when commit.
 
 pub mod arena;
 // pub mod graph;

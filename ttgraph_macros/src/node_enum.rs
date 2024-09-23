@@ -224,7 +224,7 @@ pub(crate) fn make_node_enum(
     match_bd_arms.push(quote!{
       Self::#ident(_) => for l in links {
         if let Self::LinkMirrorEnum::#ident(_) = l {
-          result.push(*l);
+          result.push(l);
         }
       },
     })
@@ -321,7 +321,7 @@ pub(crate) fn make_node_enum(
 
       #link_check
 
-      fn match_bd_link_group(&self, links: &Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum> {
+      fn match_bd_link_group(&self, links: Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum> {
         let mut result = Vec::new();
         match self {
           #(#match_bd_arms)*

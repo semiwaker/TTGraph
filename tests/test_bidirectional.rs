@@ -1063,4 +1063,75 @@ mod test_bidirectional {
     assert_eq!(node.g1, l2);
     assert_eq!(node.g2, l3);
   }
+
+  #[derive(TypedNode, Debug)]
+  struct XNode {
+    y: NodeIndex,
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct YNode{
+    #[group(x)]
+    x1: NodeIndex,
+    #[group(x)]
+    x2: NodeIndex,
+  }
+
+  node_enum! {
+    #[derive(Debug)]
+    enum XYNode{
+      XNode(XNode),
+      YNode(YNode),
+    }
+    link_type!{
+      XNode.y: YNode,
+      YNode.x: XNode,
+    }
+    bidirectional!{
+      XNode.y <-> YNode.x
+    }
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_multilink_1() {
+    let ctx = Context::new();
+    let mut graph = Graph::new(&ctx);
+    let mut trans = Transaction::new(&ctx);
+
+    let y = trans.insert(XYNode::YNode(YNode{x1: NodeIndex::empty(), x2: NodeIndex::empty()}));
+    let x1 = trans.insert(XYNode::XNode(XNode{y}));
+    let x2 = trans.insert(XYNode::XNode(XNode{y}));
+
+    graph.commit(trans);
+
+    let node = get_node!(graph, XYNode::XNode, x1).unwrap();
+    assert_eq!(node.y, y);
+    let node = get_node!(graph, XYNode::XNode, x2).unwrap();
+    assert_eq!(node.y, y);
+    let node = get_node!(graph, XYNode::YNode, y).unwrap();
+    assert_eq!(node.x1, x1);
+    assert_eq!(node.x2, x2);
+  }
+
+  #[test]
+  fn test_multilink_2() {
+    let ctx = Context::new();
+    let mut graph = Graph::new(&ctx);
+    let mut trans = Transaction::new(&ctx);
+
+    let x1 = trans.insert(XYNode::XNode(XNode{y: NodeIndex::empty()}));
+    let x2 = trans.insert(XYNode::XNode(XNode{y: NodeIndex::empty()}));
+
+    let y = trans.insert(XYNode::YNode(YNode{x1, x2}));
+    graph.commit(trans);
+
+    let node = get_node!(graph, XYNode::XNode, x1).unwrap();
+    assert_eq!(node.y, y);
+    let node = get_node!(graph, XYNode::XNode, x2).unwrap();
+    assert_eq!(node.y, y);
+    let node = get_node!(graph, XYNode::YNode, y).unwrap();
+    assert_eq!(node.x1, x1);
+    assert_eq!(node.x2, x2);
+  }
 }
