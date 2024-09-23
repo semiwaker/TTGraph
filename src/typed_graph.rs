@@ -62,6 +62,12 @@ impl NodeIndex {
   }
 }
 
+impl Default for NodeIndex {
+  fn default() -> Self {
+    Self::empty()
+  }
+}
+
 impl ArenaIndex for NodeIndex {
   fn new(id: usize) -> Self {
     NodeIndex(id)
