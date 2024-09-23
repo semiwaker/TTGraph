@@ -88,7 +88,7 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   let node_type_mirror = make_node_type_mirror_enum(&mut generated, &vars, &enumt);
 
   let gen_mod = make_generated_mod(&mut result, generated, &enumt, &vis);
-  
+
   let mut bidirectional_links = Vec::new();
   let mut groups = Vec::new();
   let mut type_annotations = Vec::new();
@@ -149,13 +149,15 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
 /// Automatically implements `TypedNode` trait for a struct.
 /// Helpep attributes:
 /// + `#[group(group1, group2, ...)]`: declare this field (must be links) is inside some groups
-#[proc_macro_derive(TypedNode, attributes(group))]
+#[proc_macro_derive(TypedNode, attributes(group, phantom_group))]
 #[proc_macro_error]
 pub fn typed_node(input: TokenStream) -> TokenStream {
   let input: ItemStruct = parse_macro_input!(input);
   let name = input.ident.clone();
   let vis = input.vis.clone();
   let generics = input.generics.clone();
+  let attrs = input.attrs.clone();
+
 
   let Fields::Named(fields) = &input.fields else { panic!("Impossible!") };
   let mut links = Vec::new();
@@ -235,11 +237,26 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
     groups.push(Vec::new());
   }
 
+  for a in attrs {
+    if a.path().is_ident("phantom_group") {
+      a.parse_nested_meta(|meta|{
+        if let Some(ident) = meta.path.get_ident() {
+          group_map.entry(ident.clone()).or_default();
+          return Ok(());
+        } else {
+          emit_error!(meta.path, "Group can not be neseted!");
+          return Ok(());
+        }
+      }).unwrap();
+    }
+  }
+
+  abort_if_dirty();
   let mut result = proc_macro2::TokenStream::new();
   let mut generated = proc_macro2::TokenStream::new();
 
-  let source_enum = make_node_source_enum(&mut generated, &links, &name,);
-  let link_mirror = make_link_mirror(&mut generated, &links, &name, );
+  let source_enum = make_node_source_enum(&mut generated, &links, &name);
+  let link_mirror = make_link_mirror(&mut generated, &links, &name);
   let log_mirror = make_log_mirror(&mut generated, &links, &group_map, &name);
 
   let gen_mod = make_generated_mod(&mut result, generated, &name, &vis);
@@ -247,6 +264,7 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
     &links,
     &data,
     &groups,
+    &group_map,
     &name,
     &generics,
     &gen_mod,
@@ -257,6 +275,12 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
 
   result.into()
 }
+
+// /// Mark a phantom group (a group that does not have a link) in a TypedNode
+// #[proc_macro_attribute]
+// pub fn phantom_group(_attr: TokenStream, input: TokenStream) -> TokenStream {
+//   input
+// }
 
 // #[proc_macro]
 // #[proc_macro_error]

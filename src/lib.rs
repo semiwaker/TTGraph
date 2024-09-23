@@ -1,3 +1,7 @@
+//! [<img alt="Static Badge" src="https://img.shields.io/badge/github-semiwaker%2Fttgraph-blue?style=for-the-badge&logo=github">](https://github.com/semiwaker/TTGraph)
+//! [<img alt="Static Badge" src="https://img.shields.io/badge/crates.io-ttgraph-orange?style=for-the-badge&logo=rust">](https://crates.io/crates/ttgraph)
+//! [<img alt="Static Badge" src="https://img.shields.io/badge/dos.rs-ttgraph-green?style=for-the-badge&logo=docs.rs">](https://docs.rs/ttgraph)
+//!
 //! TTGraph is:
 //! + A container or database for many different data, which cross-reference each other, forming a graph-like data structure.
 //! + **Typed graph:** A collection of multiple types of nodes. Each node hold some private data, and some pointers/edges/references to other nodes.
@@ -813,6 +817,41 @@
 //! assert_eq!(node.g1, l2);
 //! assert_eq!(node.g2, l3);
 //! # }
+//! ```
+//!
+//! In some cases, most types in a type-group all have a link group, but one type in that type-group does not have that link-group, which would cause compile error.
+//!
+//! A `phantom_group` can be used in this case to create a link group that only exists from the view of a NodeEnum.
+//!
+//! ```
+//! # use ttgraph::*;
+//! #[derive(TypedNode)]
+//! #[phantom_group(b)]
+//! struct A{
+//!   #[group(a)]
+//!   x: NodeIndex,
+//! }
+//!
+//! #[derive(TypedNode)]
+//! struct B{
+//!   #[group(a)]
+//!   x: NodeIndex,
+//!   #[group(b)]
+//!   y: NodeIndex,
+//! }
+//!
+//! node_enum!{
+//!   enum NodeAB{
+//!     A(A),
+//!     B(B),
+//!   }
+//!   group!{ All{A, B} }
+//!   link_type!{
+//!     All.a : A,
+//!     All.b : B,
+//!   }
+//! }
+//! # fn main() {}
 //! ```
 //!
 //! ## Working In Progress

@@ -80,6 +80,8 @@ pub trait TypedNode {
   /// Get the links by group name
   fn get_links_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
 
+  fn get_link_or_group_by_name(name: &'static str) -> Option<Self::LoGMirror>;
+
   // fn data_types() -> [TypeId];
   /// Get the name of the data
   fn data_names() -> &'static [&'static str];
@@ -212,7 +214,10 @@ pub trait NodeEnum {
   fn get_bidiretional_link_mirrors_of(
     &self, link: Self::LinkMirrorEnum,
   ) -> Vec<Self::LinkMirrorEnum> {
-    Self::to_log_mirror_enums(link).into_iter().flat_map(|x|self.get_bidiretional_link_mirrors_of_log(x)).collect()
+    Self::to_log_mirror_enums(link)
+      .into_iter()
+      .flat_map(|x| self.get_bidiretional_link_mirrors_of_log(x))
+      .collect()
   }
 
   /// Get the opposite links of the specified link or group
@@ -220,17 +225,25 @@ pub trait NodeEnum {
     &self, link: Self::LoGMirrorEnum,
   ) -> Vec<Self::LinkMirrorEnum>;
 
-  fn check_link_type(target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum) -> LinkTypeCheckResult<Self> {
+  fn check_link_type(
+    target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum,
+  ) -> LinkTypeCheckResult<Self> {
     for l in Self::to_log_mirror_enums(link) {
       Self::check_link_type_by_group(target, l)?;
     }
     Ok(())
   }
 
-  fn check_link_type_by_group(target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum) -> LinkTypeCheckResult<Self>;
+  fn check_link_type_by_group(
+    target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum,
+  ) -> LinkTypeCheckResult<Self>;
+
+  fn match_bd_link_group(&self, links: &Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum>;
 }
 
 pub type BidirectionalLinks<LinkMirrorT> = Vec<(Vec<NodeIndex>, Vec<LinkMirrorT>)>;
+
+pub type BidirectionalLinkGroup<LinkMirrorT> = (NodeIndex, Vec<LinkMirrorT>);
 
 /// The side effect of `modify_node`, intent to be used by macros
 #[StructFields(pub)]

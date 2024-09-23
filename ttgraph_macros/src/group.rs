@@ -1,5 +1,6 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
+use change_case::camel_case;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
@@ -73,6 +74,41 @@ pub(crate) fn make_get_links_by_group(
       match name{
         #(#arms)*
         _ => vec![],
+      }
+    }
+  }
+}
+
+pub(crate) fn make_get_link_or_group(
+  links: &[LinkType], group_map: &BTreeMap<Ident,Vec<Ident>>,
+) -> TokenStream {
+  let mut arms = Vec::new();
+  for l in links {
+    match l {
+      LinkType::Direct(ident, camel) => {
+        arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
+      },
+      LinkType::HSet(ident, camel) => {
+        arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
+      },
+      LinkType::BSet(ident, camel) => {
+        arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
+      },
+      LinkType::Vec(ident, camel) => {
+        arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
+      },
+      LinkType::Empty => {},
+    }
+  }
+  for (g,_) in group_map {
+    let c = upper_camel(g);
+    arms.push(quote! {std::stringify!(#g) => Some(Self::LoGMirror::#c),});
+  }
+  quote! {
+    fn get_link_or_group_by_name(name: &'static str) -> Option<Self::LoGMirror> {
+      match name {
+        #(#arms)*
+        _ => None
       }
     }
   }

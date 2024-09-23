@@ -219,12 +219,24 @@ pub(crate) fn make_node_enum(
     expand_group_arms.push(quote!{Self::LoGMirrorEnum::#ident(x) => Vec::from_iter(x.to_links().iter().map(|x|Self::LinkMirrorEnum::#ident(*x))),})
   }
 
+  let mut match_bd_arms = Vec::new();
+  for (ident, _) in vars {
+    match_bd_arms.push(quote!{
+      Self::#ident(_) => for l in links {
+        if let Self::LinkMirrorEnum::#ident(_) = l {
+          result.push(*l);
+        }
+      },
+    })
+  }
+
   let bidirectional_link = make_bidirectional_link(vars, bidirectional_links);
   let in_group = make_in_group(groups);
   let link_check = make_check_link_type(vars, type_annotations, groups);
 
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
   quote!{
+    #[automatically_derived]
     impl #impl_generics NodeEnum for #enumt #ty_generics #where_clause {
       type SourceEnum = #gen_mod::#source_enum #ty_generics;
       type LinkMirrorEnum = #gen_mod::#link_mirror_enum #ty_generics;
@@ -308,6 +320,14 @@ pub(crate) fn make_node_enum(
       #bidirectional_link
 
       #link_check
+
+      fn match_bd_link_group(&self, links: &Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum> {
+        let mut result = Vec::new();
+        match self {
+          #(#match_bd_arms)*
+        }
+        result
+      }
     }
   }.to_tokens(result);
 }

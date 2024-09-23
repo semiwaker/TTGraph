@@ -31,6 +31,7 @@ pub mod macros;
 pub use ttgraph_macros::*;
 
 /// The index of a node, which implements [`Copy`].
+///
 /// Note: The index is very independent to the [`Graph`], which does not check if it is realy pointing to a node in the graph.
 #[derive(
   Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
@@ -78,6 +79,7 @@ impl Display for NodeIndex {
 }
 
 /// A graph with typed nodes
+///
 /// The graph can only by modified by commiting a transaction, which avoids mutable borrow of the graph
 ///
 /// # Example:
@@ -131,6 +133,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Get the reference of a node. For convinience, if the type of the node is previously known, use [`get_node!()`](crate::get_node!) instead.
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -171,7 +174,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Iterate all nodes in the graph following the order of NodeIndex.
+  ///
   /// If only a type of node is wanted, use [`iter_nodes!`](`crate::iter_nodes!`) instead.
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -218,6 +223,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Iterate all nodes within the named group
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -279,6 +285,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Get the number of nodes in a graph
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -314,6 +321,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Commit an [`Transaction`] to modify the graph
+  ///
   /// Operation order:
   /// + Redirect nodes
   /// + Insert new nodes
@@ -352,6 +360,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Similar to [`commit()`](Graph::commit), but with additional checks on the changed nodes and links.
+  ///
   /// See [`GraphCheck`] for more information.
   #[cfg(feature = "debug")]
   pub fn commit_checked(&mut self, t: Transaction<NodeT>, checks: &GraphCheck<NodeT>) {
@@ -364,9 +373,11 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   /// Switch the context and relabel the node ids.
+  ///
   /// # Usecase:
   /// + Useful when there are a lot of removed [`NodeIndex`], and after context switching the indexes will be more concise.
   /// + Merge two graphs with different context. See [`merge`](Transaction::merge) for example.
+  ///
   /// # Warning:
   /// + Please ensure there is no uncommitted transactions!
   /// + [`NodeIndex`] pointing to this graph is useless after context switching!

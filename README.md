@@ -1,5 +1,9 @@
 # TTGraph README
 
+[<img alt="Static Badge" src="https://img.shields.io/badge/github-semiwaker%2Fttgraph-blue?style=for-the-badge&logo=github">](https://github.com/semiwaker/TTGraph)
+[<img alt="Static Badge" src="https://img.shields.io/badge/crates.io-ttgraph-orange?style=for-the-badge&logo=rust">](https://crates.io/crates/ttgraph)
+[<img alt="Static Badge" src="https://img.shields.io/badge/dos.rs-ttgraph-green?style=for-the-badge&logo=docs.rs">](https://docs.rs/ttgraph)
+
 TTGraph is:
 
 + A container or database for many different data, which cross-reference each other, forming a graph-like data structure.
@@ -427,6 +431,10 @@ Check the document for example.
 
 + Allow grouping in `link_type!` and `bidirectional!`
 + Hide generated types into a generated `mod` for clearer `use`.
+
+### 0.3.1
+
++ Added `phantom_group` attribute for `TypedNode` derive.
 
 ## License
 

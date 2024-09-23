@@ -953,7 +953,7 @@ mod test_bidirectional {
     g2: NodeIndex,
   }
 
-  node_enum!{
+  node_enum! {
     enum LR{
       Left1(Left1),
       Left2(Left2),
@@ -1006,10 +1006,34 @@ mod test_bidirectional {
     trans.fill_back(l3, LR::Left3(Left3 { g1: r1, g2: r4 }));
     trans.fill_back(l4, LR::Left4(Left4 { g1: r2, g2: r3 }));
 
-    trans.fill_back(r1, LR::Right1(Right1 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
-    trans.fill_back(r2, LR::Right2(Right2 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
-    trans.fill_back(r3, LR::Right3(Right3 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
-    trans.fill_back(r4, LR::Right4(Right4 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
+    trans.fill_back(
+      r1,
+      LR::Right1(Right1 {
+        g1: NodeIndex::empty(),
+        g2: NodeIndex::empty(),
+      }),
+    );
+    trans.fill_back(
+      r2,
+      LR::Right2(Right2 {
+        g1: NodeIndex::empty(),
+        g2: NodeIndex::empty(),
+      }),
+    );
+    trans.fill_back(
+      r3,
+      LR::Right3(Right3 {
+        g1: NodeIndex::empty(),
+        g2: NodeIndex::empty(),
+      }),
+    );
+    trans.fill_back(
+      r4,
+      LR::Right4(Right4 {
+        g1: NodeIndex::empty(),
+        g2: NodeIndex::empty(),
+      }),
+    );
 
     graph.commit(trans);
 
@@ -1026,7 +1050,6 @@ mod test_bidirectional {
     assert_eq!(node.g1, r2);
     assert_eq!(node.g2, r3);
 
-
     let node = get_node!(graph, LR::Right1, r1).unwrap();
     assert_eq!(node.g1, l1);
     assert_eq!(node.g2, l3);
@@ -1040,5 +1063,4 @@ mod test_bidirectional {
     assert_eq!(node.g1, l2);
     assert_eq!(node.g2, l3);
   }
-
 }

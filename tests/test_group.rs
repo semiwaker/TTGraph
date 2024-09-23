@@ -3,7 +3,7 @@
 #![allow(unused_mut)]
 
 #[cfg(test)]
-mod test_bidirectional {
+mod test_group {
   use std::collections::BTreeSet;
 
   use ttgraph::*;
@@ -118,5 +118,32 @@ mod test_bidirectional {
     assert_eq!(Vec::from_iter(graph.iter_group("third").map(|(x, _)| x)), vec![a, d]);
     assert_eq!(Vec::from_iter(graph.iter_group("one").map(|(x, _)| x)), vec![b]);
     assert_eq!(Vec::from_iter(graph.iter_group("all").map(|(x, _)| x)), vec![a, b, c, d]);
+  }
+
+  #[derive(TypedNode)]
+  #[phantom_group(b)]
+  struct A{
+    #[group(a)]
+    x: NodeIndex,
+  }
+
+  #[derive(TypedNode)]
+  struct B{
+    #[group(a)]
+    x: NodeIndex,
+    #[group(b)]
+    y: NodeIndex,
+  }
+
+  node_enum!{
+    enum NodeAB{
+      A(A),
+      B(B),
+    }
+    group!{ All{A, B} }
+    link_type!{
+      All.a : A,
+      All.b : B,
+    }
   }
 }

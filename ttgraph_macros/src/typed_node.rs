@@ -165,7 +165,7 @@ pub(crate) fn make_log_mirror(
 }
 
 pub(crate) fn make_typed_node(
-  links: &[LinkType], data: &[(Ident, TypePath)], groups: &[Vec<Ident>], name: &Ident,
+  links: &[LinkType], data: &[(Ident, TypePath)], groups: &[Vec<Ident>], group_map: &BTreeMap<Ident, Vec<Ident>>, name: &Ident,
   generics: &Generics, gen_mod: &Ident, source_enum: &Ident, link_mirror: &Ident, log_mirror: &Ident,
 ) -> TokenStream {
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -400,6 +400,7 @@ pub(crate) fn make_typed_node(
   }
 
   let get_links_by_group = make_get_links_by_group(links, groups);
+  let get_log_by_name = make_get_link_or_group(links, group_map);
 
   // Generate the static data type vec
   let mut data_type_vec = Vec::new();
@@ -440,6 +441,7 @@ pub(crate) fn make_typed_node(
   }
 
   quote! {
+    #[automatically_derived]
     impl #impl_generics ttgraph::TypedNode for #name #ty_generics #where_clause {
       type Source = #gen_mod::#source_enum;
       type LinkMirror = #gen_mod::#link_mirror;
@@ -486,6 +488,7 @@ pub(crate) fn make_typed_node(
         }
       }
       #get_links_by_group
+      #get_log_by_name
 
       // fn data_types() -> [std::any::TypeId] {
       //   [#(#data_type_vec),*]

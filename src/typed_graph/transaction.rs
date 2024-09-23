@@ -4,7 +4,9 @@ use visible::StructFields;
 
 use super::*;
 /// The transaction to modify a [`Graph`].
+///
 /// It is a operation recorder which have independent lifetime than the graph and does not hold reference to the graph.
+///
 /// The transaction and the graph should have been created from the same [`Context`] to ensure correctness.
 #[StructFields(pub(crate))]
 pub struct Transaction<'a, NodeT: NodeEnum> {
@@ -20,7 +22,9 @@ pub struct Transaction<'a, NodeT: NodeEnum> {
 
 impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Make a empty transaction
+  ///
   /// Please ensure the [`Graph`] and the [`Transaction`] use the same Context!
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -58,7 +62,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Allocate a new [`NodeIndex`] for a new node, use together with [`fill_back`](Transaction::fill_back)
+  ///
   /// Useful when there is a cycle.
+  ///
   /// # Panic
   /// If there is a node that is allocaed, but is not filled back, it is detected and panic to warn the user.
   /// # Example
@@ -103,6 +109,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Insert a new node into the graph, returns a [`NodeIndex`] pointing to the new node
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -131,7 +138,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Remove an existing node
+  ///
   /// Note: nodes created by [`insert`](Transaction::insert) and [`alloc`](Transaction::alloc) in this uncommitted transaction can also be removed.
+  ///
   /// Example:
   /// ```
   /// use ttgraph::*;
@@ -167,7 +176,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Mutate a node as with a closure `FnOnce(&mut NodeT)`.
+  ///
   /// If the type of the node is previously known, use [`mut_node!`](crate::mut_node!) instead.
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -202,8 +213,10 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// }
   /// ```
   /// # Performance warning
+  ///
   /// TTGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
-  /// Try not to create a node with a very large connectivity, or merge multiple operations into once.
+  ///
+  /// Try not to create a node with a very large connectivity. Merge multiple operations into one.
   pub fn mutate<F>(&mut self, node: NodeIndex, func: F)
   where
     F: FnOnce(&mut NodeT) + 'a,
@@ -216,7 +229,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Update a node with a closure `FnOnce(NodeT) -> NodeT`.
+  ///
   /// If the type of the node is previously known, use [`update_node!`](crate::update_node!) instead.
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -252,8 +267,10 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// # }
   /// ```
   /// # Performance warning
+  ///
   /// TTGraph does not know which link the user modified, so it always assumes all old links are removed and new links are added.
-  /// Try not to create a node with a very large connectivity, or merge multiple operations into once.
+  ///
+  /// Try not to create a node with a very large connectivity. Merge multiple operations into one.
   pub fn update<F>(&mut self, node: NodeIndex, func: F)
   where
     F: FnOnce(NodeT) -> NodeT + 'a,
@@ -266,7 +283,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Redirect the connections from old_node to new_node
+  ///
   /// Nodes in the [`Graph`] and new nodes in the [`Transaction`] are both redirected
+  ///
   /// See [`redirect_links`](Transaction::redirect_links) for counter-example
   /// # Example
   /// ```
@@ -316,7 +335,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Redirect the connections from old_node to new_node
+  ///
   /// Only nodes in the [`Graph`] is redirected, new nodes in the [`Transaction`] is not redirected
+  ///
   /// See [`redirect_all_links`](Transaction::redirect_all_links) for counter-example
   /// # Example
   /// ```
@@ -376,7 +397,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Merge a graph and all its nodes
+  ///
   /// The merged graph and this transaction should have the same context, otherwise use [`switch_context`](Graph::switch_context) first.
+  ///
   /// ```
   /// use ttgraph::*;
   /// #[derive(TypedNode)]
@@ -424,7 +447,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Give up the transaction. Currently if a transaction is dropped without commit, it does not give a warning or panic. This issue may be fixed in the future.
+  ///
   /// Currently this method does nothing.
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
