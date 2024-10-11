@@ -66,6 +66,8 @@ pub trait TypedNode {
   fn add_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
   /// Remove a link, designed for bidirectional links, return true if the link is actually removed
   fn remove_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
+  /// Check if the link contains target
+  fn contains_link(&self, link: Self::LinkMirror, target: NodeIndex) -> bool;
 
   /// Get the types of the links
   fn link_types() -> &'static [LinkType];
@@ -179,6 +181,9 @@ pub trait NodeEnum {
   fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
   /// Check if the link and the node is of the same type
   fn check_link(&self, link: Self::LinkMirrorEnum) -> bool;
+  /// Check if the link contains target
+  fn contains_link(&self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
+
   /// Get the links by name
   fn get_links_by_name(
     &self, name: &'static str,

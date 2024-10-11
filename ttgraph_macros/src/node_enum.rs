@@ -177,6 +177,19 @@ pub(crate) fn make_node_enum(
     })
   }
 
+  let mut contains_link_arms = Vec::new();
+  for (ident, ty) in vars {
+    contains_link_arms.push(quote! {
+      Self::#ident(x) => {
+        if let Self::LinkMirrorEnum::#ident(src) = link {
+          <#ty as TypedNode>::contains_link(x, src, target)
+        } else {
+          false
+        }
+      },
+    })
+  }
+
   let mut get_link_by_name_arms = Vec::new();
   for (ident, _) in vars {
     get_link_by_name_arms.push(quote! {
@@ -275,6 +288,11 @@ pub(crate) fn make_node_enum(
       fn check_link(&self, link: Self::LinkMirrorEnum) -> bool {
         match self{
           #(#check_link_arms)*
+        }
+      }
+      fn contains_link(&self, link: Self::LinkMirrorEnum, target: ttgraph::NodeIndex) -> bool {
+        match self{
+          #(#contains_link_arms)*
         }
       }
       fn get_links_by_name(&self, name: &'static str) -> Box<dyn std::iter::Iterator<Item = ttgraph::NodeIndex> + '_> {

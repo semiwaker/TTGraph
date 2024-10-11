@@ -13,7 +13,7 @@ pub struct Transaction<'a, NodeT: NodeEnum> {
   ctx_id: Uuid,
   alloc_nodes: BTreeSet<NodeIndex>,
   inc_nodes: Arena<NodeIndex, NodeT>,
-  dec_nodes: Vec<NodeIndex>,
+  dec_nodes: BTreeSet<NodeIndex>,
   mut_nodes: Vec<(NodeIndex, MutFunc<'a, NodeT>)>,
   update_nodes: Vec<(NodeIndex, UpdateFunc<'a, NodeT>)>,
   redirect_all_links_vec: Vec<(NodeIndex, NodeIndex)>,
@@ -48,12 +48,12 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// # }
   /// ```
   pub fn new(context: &Context) -> Self {
-    let node_dist = Arc::clone(&context.node_dist);
+    let node_dist = context.node_dist.clone();
     Transaction {
       ctx_id: context.id,
       alloc_nodes: BTreeSet::new(),
       inc_nodes: Arena::new(node_dist),
-      dec_nodes: Vec::new(),
+      dec_nodes: BTreeSet::new(),
       mut_nodes: Vec::new(),
       update_nodes: Vec::new(),
       redirect_all_links_vec: Vec::new(),
@@ -171,7 +171,7 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// ```
   pub fn remove(&mut self, node: NodeIndex) {
     if self.inc_nodes.remove(node).is_none() && !self.alloc_nodes.remove(&node) {
-      self.dec_nodes.push(node);
+      self.dec_nodes.insert(node);
     }
   }
 

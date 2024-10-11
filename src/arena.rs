@@ -1,9 +1,13 @@
-use std::collections::{btree_map, BTreeMap};
+// use std::collections::{btree_map, BTreeMap};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::iter::{ExactSizeIterator, FusedIterator, Iterator};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+
+use ordermap::{self, OrderMap};
+
+use crate::id_distributer::IdDistributer;
 
 pub trait ArenaIndex:
   Hash + PartialEq + Eq + Debug + Copy + Clone + PartialOrd + Ord
@@ -15,13 +19,13 @@ pub trait ArenaIndex:
 /// Currently, it is a wrapper over BTreeMap.
 #[derive(Debug, Clone)]
 pub(crate) struct Arena<K: ArenaIndex, V> {
-  distributer: Arc<IdDistributer>,
-  container: BTreeMap<K, V>,
+  distributer: IdDistributer,
+  container: OrderMap<K, V>,
 }
 
 impl<K: ArenaIndex, V> Arena<K, V> {
-  pub fn new(distributer: Arc<IdDistributer>) -> Self {
-    Arena { distributer, container: BTreeMap::new() }
+  pub fn new(distributer: IdDistributer) -> Self {
+    Arena { distributer, container: OrderMap::new() }
   }
 
   // pub fn clear(&mut self) {
@@ -49,7 +53,7 @@ impl<K: ArenaIndex, V> Arena<K, V> {
   }
 
   pub fn remove(&mut self, i: K) -> Option<V> {
-    self.container.remove(&i)
+    self.container.swap_remove(&i)
   }
 
   pub fn contains(&self, i: K) -> bool {
@@ -100,7 +104,7 @@ impl<K: ArenaIndex, V> Arena<K, V> {
 }
 
 #[derive(Debug)]
-pub struct Iter<'a, K, V>(btree_map::Iter<'a, K, V>)
+pub struct Iter<'a, K, V>(ordermap::map::Iter<'a, K, V>)
 where
   K: ArenaIndex,
   V: 'a;
@@ -141,7 +145,7 @@ where
 {
 }
 #[derive(Debug)]
-pub struct IntoIter<K, V>(btree_map::IntoIter<K, V>)
+pub struct IntoIter<K, V>(ordermap::map::IntoIter<K, V>)
 where
   K: ArenaIndex;
 
@@ -162,7 +166,7 @@ impl<K, V> FusedIterator for IntoIter<K, V> where K: ArenaIndex {}
 impl<K, V> ExactSizeIterator for IntoIter<K, V> where K: ArenaIndex {}
 
 #[derive(Debug)]
-pub struct IterMut<'a, K, V>(btree_map::IterMut<'a, K, V>)
+pub struct IterMut<'a, K, V>(ordermap::map::IterMut<'a, K, V>)
 where
   V: 'a,
   K: ArenaIndex;
@@ -244,29 +248,3 @@ impl<K: ArenaIndex, V> std::ops::IndexMut<K> for Arena<K, V> {
   }
 }
 
-/// An atomic context to make distinct usize ids
-#[derive(Debug)]
-pub struct IdDistributer {
-  cnt: AtomicUsize,
-}
-
-impl IdDistributer {
-  pub fn new() -> IdDistributer {
-    IdDistributer { cnt: AtomicUsize::new(0) }
-  }
-
-  pub fn alloc(&self) -> usize {
-    let c = self.cnt.fetch_add(1, Ordering::Relaxed);
-    c + 1
-  }
-
-  pub(crate) fn from_count(cnt: usize) -> IdDistributer {
-    IdDistributer { cnt: AtomicUsize::new(cnt) }
-  }
-}
-
-impl Default for IdDistributer {
-  fn default() -> Self {
-    IdDistributer { cnt: AtomicUsize::new(0) }
-  }
-}

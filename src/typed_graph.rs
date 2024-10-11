@@ -3,16 +3,19 @@
 //! An edge in this graph is a data field in the node.
 
 use std::any::Any;
-use std::collections::{BTreeMap, BTreeSet};
+// use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use ordermap::{OrderMap, OrderSet};
+
 use uuid::Uuid;
 
-use crate::arena::{self, Arena, ArenaIndex, IdDistributer};
+use crate::arena::{self, Arena, ArenaIndex};
+use crate::id_distributer::IdDistributer;
 
 pub mod debug;
 pub mod display;
@@ -125,7 +128,7 @@ impl Display for NodeIndex {
 pub struct Graph<NodeT: NodeEnum> {
   ctx_id: Uuid,
   nodes: Arena<NodeIndex, NodeT>,
-  back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>>,
+  back_links: OrderMap<NodeIndex, OrderSet<(NodeIndex, NodeT::SourceEnum)>>,
 }
 
 impl<NodeT: NodeEnum> Graph<NodeT> {
@@ -133,8 +136,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   pub fn new(context: &Context) -> Self {
     Graph {
       ctx_id: context.id,
-      nodes: Arena::new(Arc::clone(&context.node_dist)),
-      back_links: BTreeMap::new(),
+      nodes: Arena::new(context.node_dist.clone()),
+      back_links: OrderMap::new(),
     }
   }
 
@@ -393,8 +396,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// + Please ensure there is no uncommitted transactions!
   /// + [`NodeIndex`] pointing to this graph is useless after context switching!
   pub fn switch_context(self, new_ctx: &Context) -> Self {
-    let mut new_nodes = Arena::new(Arc::clone(&new_ctx.node_dist));
-    let mut id_map = BTreeMap::new();
+    let mut new_nodes = Arena::new(new_ctx.node_dist.clone());
+    let mut id_map = OrderMap::new();
 
     for (id, x) in self.nodes {
       id_map.insert(id, new_nodes.insert(x));
@@ -402,14 +405,14 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
 
     for (id, new_id) in &id_map {
       for (y, s) in &self.back_links[id] {
-        new_nodes.get_mut(id_map[&y]).unwrap().modify_link(*s, *id, *new_id);
+        new_nodes.get_mut(id_map[y]).unwrap().modify_link(*s, *id, *new_id);
       }
     }
 
     let mut result = Graph {
       ctx_id: new_ctx.id,
-      nodes: Arena::new(Arc::clone(&new_ctx.node_dist)),
-      back_links: BTreeMap::new(),
+      nodes: Arena::new(new_ctx.node_dist.clone()),
+      back_links: OrderMap::new(),
     };
 
     let mut lcr = LinkChangeRecorder::default();
@@ -439,8 +442,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   #[cfg(feature = "debug")]
   #[doc(hidden)]
   pub fn check_backlinks(&self) {
-    let mut back_links: BTreeMap<NodeIndex, BTreeSet<(NodeIndex, NodeT::SourceEnum)>> =
-      BTreeMap::new();
+    let mut back_links: OrderMap<NodeIndex, OrderSet<(NodeIndex, NodeT::SourceEnum)>> =
+      OrderMap::new();
     for (x, n) in &self.nodes {
       back_links.entry(x).or_default();
       for (y, s) in n.iter_sources() {
@@ -452,7 +455,12 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
         debug_assert!(links.contains(&(x, s)));
       }
     }
-    debug_assert_eq!(back_links, self.back_links);
+    for (k, v) in back_links.iter() {
+      let Some(v2) = self.back_links.get(k) else {panic!("Key {:?} not in back_links {:?}", k, self.back_links)};
+      if !v2.set_eq(v) {
+        panic!("Backlink not equal {:?} expect {:?}", v2, v);
+      }
+    }
   }
 
   #[cfg(not(feature = "debug"))]
@@ -574,7 +582,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
      lcr: &mut LinkChangeRecorder<NodeT>,
   ) {
     let old_link = self.back_links.remove(&old_node).unwrap();
-    self.back_links.insert(old_node, BTreeSet::new());
+    self.back_links.insert(old_node, OrderSet::new());
 
     let new_link = self.back_links.entry(new_node).or_default();
     for (y, s) in old_link {
@@ -595,7 +603,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     &mut self, replacements: Vec<(NodeIndex, NodeIndex)>,
      lcr: &mut LinkChangeRecorder<NodeT>,
   ) {
-    let mut fa = BTreeMap::new();
+    let mut fa = OrderMap::new();
 
     for (old, new) in &replacements {
       fa.entry(*old).or_insert(*old);
@@ -657,7 +665,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       }
 
       let node = self.nodes.get(y).unwrap();
-      let found = bds.iter().flat_map(|link|node.iter_links(*link)).find(|z|*z==x).is_some();
+      let found = bds.iter().any(|link|node.contains_link(*link, x));
 
       if !found {
         assert!(bds.len()==1, "Node with multiple choices for bidiretional link detected!");
@@ -668,25 +676,6 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       }
     }
   }
-
-  // fn apply_bidirectional_links(&mut self, bd: BidirectionalLinkRecorder<NodeT>) {
-  //   for (x, y, l) in bd.to_remove {
-  //     if self.nodes.contains(x)
-  //       && self.nodes.contains(y)
-  //       && self.nodes.get_mut(y).unwrap().remove_link(l, x)
-  //     {
-  //       self.remove_back_link(y, x, NodeT::to_source_enum(l));
-  //     }
-  //   }
-  //   for (x, y, l) in bd.to_add {
-  //     if self.nodes.contains(x)
-  //       && self.nodes.contains(y)
-  //       && self.nodes.get_mut(y).unwrap().add_link(l, x)
-  //     {
-  //       self.add_back_link(y, x, NodeT::to_source_enum(l));
-  //     }
-  //   }
-  // }
 
   fn add_back_link(&mut self, x: NodeIndex, y: NodeIndex, src: NodeT::SourceEnum) {
     self.back_links.entry(y).or_default().insert((x, src));
@@ -728,7 +717,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     &self, lcr: &LinkChangeRecorder<NodeT>, checks: &'a GraphCheck<NodeT>,
   ) -> Vec<&'a str> {
     let mut failed = Vec::new();
-    let mut changed_nodes = BTreeSet::new();
+    let mut changed_nodes = OrderSet::new();
     for (x, _, _) in lcr.adds.iter().chain(lcr.removes.iter()) {
       changed_nodes.insert(*x);
     }
@@ -760,7 +749,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   pub(crate) fn do_deserialize(ctx: &Context, nodes: Vec<(NodeIndex, NodeT)>) -> Self {
-    let mut arena = Arena::new(Arc::clone(&ctx.node_dist));
+    let mut arena = Arena::new(ctx.node_dist.clone());
     for (idx, node) in nodes {
       arena.fill_back(idx, node);
     }
@@ -772,58 +761,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 }
 
-// // Helper struct to record link changes for bidiretional links
-// struct BidirectionalLinkRecorder<NodeT: NodeEnum> {
-//   to_add: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
-//   to_remove: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
-// }
-// impl<NodeT: NodeEnum> BidirectionalLinkRecorder<NodeT> {
-//   fn add_one(&mut self, x: NodeIndex, y: NodeIndex, lms: &Vec<NodeT::LinkMirrorEnum>) {
-//     for l in lms {
-//       if self.to_remove.contains(&(x, y, *l)) {
-//         self.to_remove.remove(&(x, y, *l));
-//       } else {
-//         self.to_add.insert((x, y, *l));
-//       }
-//     }
-//   }
-
-//   fn add(&mut self, x: NodeIndex, ys: Vec<NodeIndex>, lms: &Vec<NodeT::LinkMirrorEnum>) {
-//     for y in ys {
-//       self.add_one(x, y, lms)
-//     }
-//   }
-
-//   fn remove_one(&mut self, x: NodeIndex, y: NodeIndex, lms: &Vec<NodeT::LinkMirrorEnum>) {
-//     for l in lms {
-//       if self.to_add.contains(&(x, y, *l)) {
-//         self.to_add.remove(&(x, y, *l));
-//       } else {
-//         self.to_remove.insert((x, y, *l));
-//       }
-//     }
-//   }
-
-//   fn remove(
-//     &mut self, x: NodeIndex, ys: Vec<NodeIndex>, lms: &Vec<NodeT::LinkMirrorEnum>,
-//   ) {
-//     for y in ys {
-//       self.remove_one(x, y, lms);
-//     }
-//   }
-// }
-// impl<NodeT: NodeEnum> Default for BidirectionalLinkRecorder<NodeT> {
-//   fn default() -> Self {
-//     BidirectionalLinkRecorder {
-//       to_add: BTreeSet::default(),
-//       to_remove: BTreeSet::default(),
-//     }
-//   }
-// }
-
 struct LinkChangeRecorder<NodeT: NodeEnum> {
-  adds: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
-  removes: BTreeSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
+  adds: OrderSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
+  removes: OrderSet<(NodeIndex, NodeIndex, NodeT::LinkMirrorEnum)>,
 }
 impl<NodeT: NodeEnum> LinkChangeRecorder<NodeT> {
   #[cfg(feature = "debug")]
@@ -859,8 +799,8 @@ impl<NodeT: NodeEnum> LinkChangeRecorder<NodeT> {
 impl<NodeT: NodeEnum> Default for LinkChangeRecorder<NodeT> {
   fn default() -> Self {
     LinkChangeRecorder {
-      adds: BTreeSet::default(),
-      removes: BTreeSet::default(),
+      adds: OrderSet::default(),
+      removes: OrderSet::default(),
     }
   }
 }
@@ -893,40 +833,28 @@ pub type UpdateFunc<'a, T> = Box<dyn FnOnce(T) -> T + 'a>;
 
 /// Context for typed graph
 /// Transactions and graph must have the same context to ensure the correctness of NodeIndex
-#[derive(Debug)]
+#[derive(Debug, Clone, Default)]
 pub struct Context {
   id: Uuid,
-  node_dist: Arc<IdDistributer>,
+  node_dist: IdDistributer,
 }
 impl Context {
   /// Create a new context
   pub fn new() -> Context {
     Context {
       id: Uuid::new_v4(),
-      node_dist: Arc::new(IdDistributer::new()),
+      node_dist: IdDistributer::new(),
     }
   }
 
   pub(crate) fn from_id(id: Uuid, cnt: usize) -> Self {
     Context {
       id,
-      node_dist: Arc::new(IdDistributer::from_count(cnt)),
+      node_dist: IdDistributer::from_count(cnt),
     }
   }
 }
-impl Default for Context {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-impl Clone for Context {
-  fn clone(&self) -> Self {
-    Context {
-      id: self.id,
-      node_dist: Arc::clone(&self.node_dist),
-    }
-  }
-}
+
 
 // /// A trait intended to be used in macros
 // pub trait SourceIterator<T: TypedNode + ?Sized>:

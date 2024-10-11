@@ -283,7 +283,7 @@ pub(crate) fn make_typed_node(
               false
             }
           } else {
-            assert!(self.#ident == target);
+            assert!(self.#ident == target, "Add link on existing direct link");
             false
           }
         },
@@ -337,6 +337,38 @@ pub(crate) fn make_typed_node(
       },
       LinkType::Vec(_, camel) => quote!{
         Self::LinkMirror::#camel => panic!("Remove link on Vec<NodeIndex> is not supported!"),
+      },
+      LinkType::Empty => quote! {
+        Self::LinkMirror::Empty => false,
+      },
+    })
+  }
+
+  // Generate the match arms for contains_link()
+  let mut contains_link_arms = Vec::new();
+  for s in links {
+    contains_link_arms.push(match s {
+      LinkType::Direct(ident, camel) => quote!{
+        Self::LinkMirror::#camel => {
+          if self.#ident.is_empty() {
+            false
+          } else {
+            self.#ident == target
+          }
+        },
+      },
+      LinkType::HSet(ident, camel) => quote!{
+        Self::LinkMirror::#camel => {
+          self.#ident.contains(&target)
+        },
+      },
+      LinkType::BSet(ident, camel) => quote!{
+        Self::LinkMirror::#camel => {
+          self.#ident.contains(&target)
+        },
+      },
+      LinkType::Vec(ident, camel) => quote!{
+        Self::LinkMirror::#camel => self.#ident.iter().any(|&x|x==target),
       },
       LinkType::Empty => quote! {
         Self::LinkMirror::Empty => false,
@@ -469,6 +501,11 @@ pub(crate) fn make_typed_node(
       fn remove_link(&mut self, link: Self::LinkMirror, target: ttgraph::NodeIndex) -> bool {
         match link{
           #(#remove_link_arms)*
+        }
+      }
+      fn contains_link(&self, link: Self::LinkMirror, target: ttgraph::NodeIndex) -> bool {
+        match link{
+          #(#contains_link_arms)*
         }
       }
 

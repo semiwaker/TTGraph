@@ -1,6 +1,5 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 
-use change_case::camel_case;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};

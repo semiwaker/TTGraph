@@ -958,6 +958,8 @@
 //! + Graph transition. A way to conviently transit `Graph<NodeEnumA>` to `Graph<NodeEnumB>`, if `NodeEnumA` and `NodeEnumB` have a lot of common variants.
 
 pub mod arena;
+pub mod cate_arena;
+pub mod id_distributer;
 // pub mod graph;
 mod typed_graph;
 

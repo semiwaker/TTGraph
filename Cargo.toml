@@ -29,6 +29,7 @@ visible = "0.0.1"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "serde"] }
 ttgraph_macros = { path = "ttgraph_macros", version = "^0.3.1" }
 serde_json = "1.0.116"
+ordermap = { version = "0.5.3", features = ["serde"] }
 
 [features]
 default = ["debug"]
