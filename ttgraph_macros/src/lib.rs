@@ -1,17 +1,20 @@
 #![crate_type = "proc-macro"]
 
-use std::collections::BTreeMap;
 use proc_macro::TokenStream;
+use std::collections::BTreeMap;
 // use proc_macro2;
 use proc_macro_error::*;
 use quote::ToTokens;
-use syn::{parse2, parse_macro_input, parse_quote, Fields, Item, ItemStruct, Type, Ident};
+use syn::{parse2, parse_macro_input, parse_quote, Fields, Ident, Item, ItemStruct, Type};
 
 mod node_enum;
 use node_enum::*;
 
 mod typed_node;
 use typed_node::*;
+
+mod cate_arena;
+use cate_arena::*;
 
 mod bidirectional;
 use bidirectional::*;
@@ -81,13 +84,6 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   //     make_transaction_by_type_trait_impl(&mut result, &generics, &enumt, ident, ty);
   //   }
   // }
-  let mut generated = proc_macro2::TokenStream::new();
-  let source_enum = make_source_enum(&mut generated, &generics, &vars, &enumt);
-  let link_mirror_enum = make_link_mirror_enum(&mut generated, &generics, &vars, &enumt);
-  let log_mirror_enum = make_log_mirror_enum(&mut generated, &generics, &vars, &enumt);
-  let node_type_mirror = make_node_type_mirror_enum(&mut generated, &vars, &enumt);
-
-  let gen_mod = make_generated_mod(&mut result, generated, &enumt, &vis);
 
   let mut bidirectional_links = Vec::new();
   let mut groups = Vec::new();
@@ -95,9 +91,7 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   for item in macro_input.items.iter().skip(1) {
     if let Item::Macro(the_macro) = item {
       if the_macro.mac.path.is_ident("bidirectional") {
-        if let Err(err) =
-          get_bidirectional_links(the_macro.mac.tokens.clone(), &mut bidirectional_links)
-        {
+        if let Err(err) = get_bidirectional_links(the_macro.mac.tokens.clone(), &mut bidirectional_links) {
           emit_error!(err.span(), "{}", err);
         }
       } else if the_macro.mac.path.is_ident("group") {
@@ -127,6 +121,16 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   check_bidirectional_links(&vars, &bidirectional_links, &groups);
   abort_if_dirty();
 
+  let mut generated = proc_macro2::TokenStream::new();
+  let source_enum = make_source_enum(&mut generated, &generics, &vars, &enumt);
+  let link_mirror_enum = make_link_mirror_enum(&mut generated, &generics, &vars, &enumt);
+  let log_mirror_enum = make_log_mirror_enum(&mut generated, &generics, &vars, &enumt);
+  let node_type_mirror = make_node_type_mirror_enum(&mut generated, &vars, &enumt);
+  let discriminant = make_node_discriminant(&mut result, &vars, &enumt, &vis);
+  let node_index = make_node_index(&mut result, &vars, &enumt, &discriminant, &vis);
+  let cate_arena = make_cate_arena(&mut result, &vars, &enumt, &discriminant, &node_index, &vis);
+  let gen_mod = make_generated_mod(&mut result, generated, &enumt, &vis);
+
   let bidirectional_links = expand_bidirectional_links(bidirectional_links, &groups);
   make_node_enum(
     &mut result,
@@ -138,6 +142,8 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
     &log_mirror_enum,
     &node_type_mirror,
     &gen_mod,
+    &node_index,
+    &discriminant,
     &bidirectional_links,
     &groups,
     type_annotations,
@@ -157,7 +163,6 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
   let vis = input.vis.clone();
   let generics = input.generics.clone();
   let attrs = input.attrs.clone();
-
 
   let Fields::Named(fields) = &input.fields else { panic!("Impossible!") };
   let mut links = Vec::new();
@@ -239,7 +244,7 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
 
   for a in attrs {
     if a.path().is_ident("phantom_group") {
-      a.parse_nested_meta(|meta|{
+      a.parse_nested_meta(|meta| {
         if let Some(ident) = meta.path.get_ident() {
           group_map.entry(ident.clone()).or_default();
           return Ok(());
@@ -247,7 +252,8 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
           emit_error!(meta.path, "Group can not be neseted!");
           return Ok(());
         }
-      }).unwrap();
+      })
+      .unwrap();
     }
   }
 
@@ -271,7 +277,8 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
     &source_enum,
     &link_mirror,
     &log_mirror,
-  ).to_tokens(&mut result);
+  )
+  .to_tokens(&mut result);
 
   result.into()
 }

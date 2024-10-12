@@ -67,11 +67,7 @@ pub(crate) fn make_log_mirror_enum(
   log_mirror_enum
 }
 
-
-
-pub(crate) fn make_node_type_mirror_enum(
-  result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident,
-) -> Ident {
+pub(crate) fn make_node_type_mirror_enum(result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident) -> Ident {
   let enum_name = format_ident!("{}NodeTypeMirror", enumt);
   let mut v = Vec::new();
   for (ident, _) in vars {
@@ -90,15 +86,15 @@ pub(crate) fn make_node_type_mirror_enum(
 }
 
 pub(crate) fn make_node_enum(
-  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident,
-  source_enum: &Ident, link_mirror_enum: &Ident, log_mirror_enum: &Ident, node_type_mirror: &Ident, gen_mod: &Ident,
-  bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup], type_annotations: Vec<TypeAnnotation>
+  result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident, source_enum: &Ident,
+  link_mirror_enum: &Ident, log_mirror_enum: &Ident, node_type_mirror: &Ident, gen_mod: &Ident, node_index: &Ident,
+  discriminant: &Ident, bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup],
+  type_annotations: Vec<TypeAnnotation>,
 ) {
-  let mut get_node_type_arms= Vec::new();
-  for (ident, _) in vars{
-    get_node_type_arms.push(quote!{Self::#ident(_) => Self::NodeTypeMirror::#ident,})
+  let mut get_node_type_arms = Vec::new();
+  for (ident, _) in vars {
+    get_node_type_arms.push(quote! {Self::#ident(_) => Self::NodeTypeMirror::#ident,})
   }
-
 
   let mut iter_src_arms = Vec::new();
   for (ident, ty) in vars {
@@ -218,8 +214,7 @@ pub(crate) fn make_node_enum(
 
   let mut to_link_arms = Vec::new();
   for (ident, _) in vars {
-    to_link_arms
-      .push(quote! {Self::SourceEnum::#ident(x) => Self::LinkMirrorEnum::#ident(x.to_link_mirror()), });
+    to_link_arms.push(quote! {Self::SourceEnum::#ident(x) => Self::LinkMirrorEnum::#ident(x.to_link_mirror()), });
   }
 
   let mut to_log_arms = Vec::new();
@@ -234,13 +229,18 @@ pub(crate) fn make_node_enum(
 
   let mut match_bd_arms = Vec::new();
   for (ident, _) in vars {
-    match_bd_arms.push(quote!{
+    match_bd_arms.push(quote! {
       Self::#ident(_) => for l in links {
         if let Self::LinkMirrorEnum::#ident(_) = l {
           result.push(l);
         }
       },
     })
+  }
+
+  let mut disc_arms = Vec::new();
+  for (ident, _) in vars {
+    disc_arms.push(quote! { Self::#ident(_) => #discriminant::#ident })
   }
 
   let bidirectional_link = make_bidirectional_link(vars, bidirectional_links);
@@ -345,6 +345,19 @@ pub(crate) fn make_node_enum(
           #(#match_bd_arms)*
         }
         result
+      }
+    }
+
+    #[automatically_derived]
+    impl ttgraph::CateNode for #enumt {
+      type D = #discriminant;
+      type Index = #node_index;
+    }
+
+    #[automatically_derived]
+    impl ttgraph::Discriminated<#discriminant> for #enumt {
+      fn discriminant(&self) -> #discriminant {
+        match self { #(#disc_arms),* }
       }
     }
   }.to_tokens(result);

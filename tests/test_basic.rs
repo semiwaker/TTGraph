@@ -71,22 +71,10 @@ mod tests_typed {
     println!("{:?}", NodeB::link_names());
     println!("{:?}", NodeA::data_names());
     println!("{:?}", NodeB::data_names());
-    println!(
-      "{:?}",
-      get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("name")
-    );
-    println!(
-      "{:?}",
-      get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<usize>("name")
-    );
-    println!(
-      "{:?}",
-      get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("data1")
-    );
-    println!(
-      "{:?}",
-      get_node!(graph, MyNodeEnum::B, b).unwrap().data_ref_by_name::<usize>("data1")
-    );
+    println!("{:?}", get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("name"));
+    println!("{:?}", get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<usize>("name"));
+    println!("{:?}", get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("data1"));
+    println!("{:?}", get_node!(graph, MyNodeEnum::B, b).unwrap().data_ref_by_name::<usize>("data1"));
     println!("{:?}", graph.get(b).unwrap().data_ref_by_name::<usize>("data1"));
     // for (idx, n) in Edge::iter_by_type(graph) {}
   }
@@ -132,13 +120,9 @@ mod tests_typed {
 
     let serialized = serde_json::to_string(&graph).unwrap();
     println!("{}", serialized);
-    println!(
-      "{}",
-      serde_json::to_string(&GraphSerializer::<TestNode>::from(graph)).unwrap()
-    );
+    println!("{}", serde_json::to_string(&GraphSerializer::<TestNode>::from(graph)).unwrap());
 
-    let deserialized: GraphSerializer<TestNode> =
-      serde_json::from_str(&serialized).unwrap();
+    let deserialized: GraphSerializer<TestNode> = serde_json::from_str(&serialized).unwrap();
     let (ctx2, graph2) = deserialize_graph(deserialized);
     println!("{:?}", graph2);
   }
