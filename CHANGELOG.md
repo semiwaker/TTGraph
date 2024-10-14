@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.1 (2024-10-14)
+
+### Bug Fixes
+
+ - <csr-id-4fd57b5be0fabff1510d962c1e96888e873fa3da/> fixed performance issue on remove
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Fixed performance issue on remove ([`4fd57b5`](https://github.com/semiwaker/TTGraph/commit/4fd57b5be0fabff1510d962c1e96888e873fa3da))
+</details>
+
 ## 0.4.0 (2024-10-14)
 
 ### New Features
