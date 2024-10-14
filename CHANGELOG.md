@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 (2024-10-14)
+
+### New Features
+
+ - <csr-id-2bfd5ca57ae71dc42b709dd44c199ddf8c5c5d42/> cate_arena derive macro runnable
+ - <csr-id-51cacf08d0b60e8599abfc62f538e060cf2a9b2d/> improved performance by replacing BTreeMap/Set with OrderMap/Set
+ - <csr-id-893aad5e2513a964236384487404df240482a3bd/> impl Default for NodeIndex
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 21 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - BREAKING CHANGE: performance improve & alloc() requires type ([`384c34d`](https://github.com/semiwaker/TTGraph/commit/384c34dfc5fc43385cdd64533e0b02e92b328085))
+    - Cate_arena derive macro runnable ([`2bfd5ca`](https://github.com/semiwaker/TTGraph/commit/2bfd5ca57ae71dc42b709dd44c199ddf8c5c5d42))
+    - Improved performance by replacing BTreeMap/Set with OrderMap/Set ([`51cacf0`](https://github.com/semiwaker/TTGraph/commit/51cacf08d0b60e8599abfc62f538e060cf2a9b2d))
+    - Impl Default for NodeIndex ([`893aad5`](https://github.com/semiwaker/TTGraph/commit/893aad5e2513a964236384487404df240482a3bd))
+</details>
+
 ## 0.3.1 (2024-09-23)
 
 ### New Features

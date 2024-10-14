@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 (2024-10-14)
+
+### New Features
+
+ - <csr-id-2bfd5ca57ae71dc42b709dd44c199ddf8c5c5d42/> cate_arena derive macro runnable
+ - <csr-id-51cacf08d0b60e8599abfc62f538e060cf2a9b2d/> improved performance by replacing BTreeMap/Set with OrderMap/Set
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 21 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - BREAKING CHANGE: performance improve & alloc() requires type ([`384c34d`](https://github.com/semiwaker/TTGraph/commit/384c34dfc5fc43385cdd64533e0b02e92b328085))
+    - Cate_arena derive macro runnable ([`2bfd5ca`](https://github.com/semiwaker/TTGraph/commit/2bfd5ca57ae71dc42b709dd44c199ddf8c5c5d42))
+    - Improved performance by replacing BTreeMap/Set with OrderMap/Set ([`51cacf0`](https://github.com/semiwaker/TTGraph/commit/51cacf08d0b60e8599abfc62f538e060cf2a9b2d))
+</details>
+
 ## 0.3.1 (2024-09-23)
 
 ### New Features
@@ -20,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 2 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -32,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.3.1, ttgraph v0.3.1 ([`e2fc203`](https://github.com/semiwaker/TTGraph/commit/e2fc2033a71b6455aee354602715e83f9c1c8c7d))
     - Fix Cargo.toml ([`3afb7ff`](https://github.com/semiwaker/TTGraph/commit/3afb7ffddd4b16ed72abf21cb1b77df2be002c6c))
     - Fixed the multiple choice problem for bidirectional link ([`b6caaad`](https://github.com/semiwaker/TTGraph/commit/b6caaadd0209b457cd92d933bcc2e30dcd1ecd41))
     - Add phantom_group ([`e4df1a6`](https://github.com/semiwaker/TTGraph/commit/e4df1a6b7f0333987dee734dadd5ab5bfc2271aa))
