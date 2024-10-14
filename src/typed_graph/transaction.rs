@@ -152,13 +152,13 @@ where
   /// Fill back the data to a [`NodeIndex`] created by [`alloc`](Transaction::alloc)
   pub fn fill_back(&mut self, idx: NodeIndex, data: NodeT) {
     self.inc_nodes.fill_back(idx, data);
-    self.alloc_nodes.remove(&idx);
+    self.alloc_nodes.swap_remove(&idx);
   }
 
   /// Fill back the data to a [`NodeIndex`] created by [`alloc_untyped`](Transaction::alloc_untyped)
   pub fn fill_back_untyped(&mut self, idx: NodeIndex, data: NodeT) {
     self.inc_nodes.fill_back_untyped(idx, data);
-    self.alloc_nodes.remove(&idx);
+    self.alloc_nodes.swap_remove(&idx);
   }
 
   /// Insert a new node into the graph, returns a [`NodeIndex`] pointing to the new node
@@ -225,7 +225,7 @@ where
   /// # }
   /// ```
   pub fn remove(&mut self, node: NodeIndex) {
-    if self.inc_nodes.remove(node).is_none() && !self.alloc_nodes.remove(&node) {
+    if self.inc_nodes.remove(node).is_none() && !self.alloc_nodes.swap_remove(&node) {
       self.dec_nodes.insert(node);
     }
   }

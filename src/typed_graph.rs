@@ -552,7 +552,7 @@ where
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
     }
     self.remove_back_links(x, &n);
-    for (y, s) in self.back_links.remove(&x).unwrap() {
+    for (y, s) in self.back_links.swap_remove(&x).unwrap() {
       self.nodes.get_mut(y).unwrap().modify_link(s, x, NodeIndex::empty());
       lcr.remove_link(y, x, NodeT::to_link_mirror_enum(s));
     }
@@ -563,7 +563,7 @@ where
     F: FnOnce(&mut NodeT),
   {
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
-      self.back_links.get_mut(&y).unwrap().remove(&(x, s));
+      self.back_links.get_mut(&y).unwrap().swap_remove(&(x, s));
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
     }
 
@@ -580,7 +580,7 @@ where
     F: FnOnce(NodeT) -> NodeT,
   {
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
-      self.back_links.get_mut(&y).unwrap().remove(&(x, s));
+      self.back_links.get_mut(&y).unwrap().swap_remove(&(x, s));
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
     }
 
@@ -593,7 +593,7 @@ where
   }
 
   fn redirect_links(&mut self, old_node: NodeIndex, new_node: NodeIndex, lcr: &mut LinkChangeRecorder<NodeT>) {
-    let old_link = self.back_links.remove(&old_node).unwrap();
+    let old_link = self.back_links.swap_remove(&old_node).unwrap();
     self.back_links.insert(old_node, OrderSet::new());
 
     let new_link = self.back_links.entry(new_node).or_default();
@@ -698,12 +698,12 @@ where
   }
 
   fn remove_back_link(&mut self, x: NodeIndex, y: NodeIndex, src: NodeT::SourceEnum) {
-    self.back_links.get_mut(&y).unwrap().remove(&(x, src));
+    self.back_links.get_mut(&y).unwrap().swap_remove(&(x, src));
   }
 
   fn remove_back_links(&mut self, x: NodeIndex, n: &NodeT) {
     for (y, s) in n.iter_sources() {
-      self.back_links.get_mut(&y).unwrap().remove(&(x, s));
+      self.back_links.get_mut(&y).unwrap().swap_remove(&(x, s));
     }
   }
 
@@ -772,7 +772,7 @@ impl<NodeT: NodeEnum> LinkChangeRecorder<NodeT> {
       return;
     }
     if self.removes.contains(&(x, y, l)) {
-      self.removes.remove(&(x, y, l));
+      self.removes.swap_remove(&(x, y, l));
     } else {
       self.adds.insert((x, y, l));
     }
@@ -787,7 +787,7 @@ impl<NodeT: NodeEnum> LinkChangeRecorder<NodeT> {
       return;
     }
     if self.adds.contains(&(x, y, l)) {
-      self.adds.remove(&(x, y, l));
+      self.adds.swap_remove(&(x, y, l));
     } else {
       self.removes.insert((x, y, l));
     }
