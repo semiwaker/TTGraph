@@ -36,9 +36,7 @@ impl Parse for NamedGroupVec {
   }
 }
 
-pub(crate) fn make_get_links_by_group(
-  links: &[LinkType], groups: &[Vec<Ident>],
-) -> TokenStream {
+pub(crate) fn make_get_links_by_group(links: &[LinkType], groups: &[Vec<Ident>]) -> TokenStream {
   let mut group_map: BTreeMap<Ident, Vec<LinkType>> = BTreeMap::new();
   for (link, group) in links.iter().zip(groups.iter()) {
     for g in group {
@@ -54,8 +52,7 @@ pub(crate) fn make_get_links_by_group(
         LinkType::Direct(ident, _) => {
           quote! {if !self.#ident.is_empty() {result.push(self.#ident);}}
         },
-        LinkType::HSet(ident, _) => quote! {result.extend(self.#ident.clone());},
-        LinkType::BSet(ident, _) => quote! {result.extend(self.#ident.clone());},
+        LinkType::Set(ident, _) => quote! {result.extend(self.#ident.clone());},
         LinkType::Vec(ident, _) => quote! {result.extend(self.#ident.clone());},
         LinkType::Empty => quote! {},
       });
@@ -78,19 +75,14 @@ pub(crate) fn make_get_links_by_group(
   }
 }
 
-pub(crate) fn make_get_link_or_group(
-  links: &[LinkType], group_map: &BTreeMap<Ident,Vec<Ident>>,
-) -> TokenStream {
+pub(crate) fn make_get_link_or_group(links: &[LinkType], group_map: &BTreeMap<Ident, Vec<Ident>>) -> TokenStream {
   let mut arms = Vec::new();
   for l in links {
     match l {
       LinkType::Direct(ident, camel) => {
         arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
       },
-      LinkType::HSet(ident, camel) => {
-        arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
-      },
-      LinkType::BSet(ident, camel) => {
+      LinkType::Set(ident, camel) => {
         arms.push(quote! {std::stringify!(#ident) => Some(Self::LoGMirror::#camel),});
       },
       LinkType::Vec(ident, camel) => {
@@ -99,7 +91,7 @@ pub(crate) fn make_get_link_or_group(
       LinkType::Empty => {},
     }
   }
-  for (g,_) in group_map {
+  for (g, _) in group_map {
     let c = upper_camel(g);
     arms.push(quote! {std::stringify!(#g) => Some(Self::LoGMirror::#c),});
   }

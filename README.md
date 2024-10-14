@@ -58,8 +58,7 @@ Here, a factory have a name, multiple workers and products. `name` is a **data f
 
 + Direct link: `NodeIndex`
 + Vector link: `Vec<NodeIndex>`
-+ Unordered set link: `HashSet<NodeIndex>`
-+ Ordered set link: `BTreeSet<NodeIndex>`
++ Set link: `HashSet<NodeIndex>`, `BTreeSet<NodeIndex>`, `ordermap::OrderSet<NodeIndex>`, `indexmap::IndexSet<NodeIndex>`
 
 ### Graph and Transaction
 
@@ -85,8 +84,8 @@ let mut graph = Graph::<Node>::new(&ctx);
 let mut trans = Transaction::new(&ctx);
 let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
-let worker1 = trans.alloc();
-let worker2 = trans.alloc();
+let worker1 = alloc_node!(trans, Node::Worker);
+let worker2 = alloc_node!(trans, Node::Worker);
 let factory = trans.insert(Node::Factory(FactoryNode{
   name: "Factory".to_string(),
   workers: HashSet::from([worker1, worker2]),
@@ -148,11 +147,11 @@ let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
 # graph.commit(trans);
 ```
 
-Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TTGraph does operations in transaction, we can first allocate a `NodeIndex` with method `alloc` for the workers, then fill the data back with method `fill_back`. The transaction prevents dangling `NodeIndex` by checking all allocated nodes are filled back when committed.
+Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TTGraph does operations in transaction, we can first allocate a `NodeIndex` with macro `alloc_node!` for the workers, then fill the data back with method `fill_back`. The transaction prevents dangling `NodeIndex` by checking all allocated nodes are filled back when committed.
 
 ```rust
-let worker1 = trans.alloc();
-let worker2 = trans.alloc();
+let worker1 = alloc_node!(trans, Node::Worker);
+let worker2 = alloc_node!(trans, Node::Worker);
 let factory = trans.insert(Node::Factory(FactoryNode{
   name: "Factory".to_string(),
   workers: HashSet::from([worker1, worker2]),
@@ -237,7 +236,7 @@ Next, when making the factory node, its workers are simply left empty. However, 
 
 Rules of bidiretional links are:
 
-+ Bidirectional links may be formed between: a pair of `NodeIndex`, between `NodeIndex` and `Set<NodeIndex>`, a pair of `Set<NodeIndex>`. (`Set` may be `HashSet` or `BTreeSet`, `Vec` is not supported currently)
++ Bidirectional links may be formed between: a pair of `NodeIndex`, between `NodeIndex` and `Set<NodeIndex>`, a pair of `Set<NodeIndex>`. (`Set` may be `HashSet`, `BTreeSet`, `OrderSet` or `IndexSet`, `Vec` is not supported currently)
 + When a link is added, the opposite side of the bidiretional link is checked. If the bidiretional link is already there, nothing happens. If that link have a place to be added, it is automatially added. Otherwise, it panics for conflict.
 + When a link is removed, the opposite side of the bidiretional link is checked. If the bidiretional link is there, it is removed. Otherwise, since TTGraph does not know if the user removes it on purpose, it is assumed that nothing should happen.
 + `NodeIndex` field: link can be added if it is `NodeIndex::empty`, otherwise it conflicts and panics. Link can be removed if it is not empty, but does not panic if it is.
@@ -436,6 +435,14 @@ Check the document for example.
 
 + Added `phantom_group` attribute for `TypedNode` derive.
 + Fixed the multiple choices problem for bidirectional links
+
+### 0.4
+
++ Improved performance. 
++ + Use ordermap as backend.
++ + Separating different kinds of nodes. Now the time complexity of iterating a type of node is only related to the number of that kinds of node.
++ + Now allows `OrderSet<NodeIndex>` and `IndexSet<NodeIndex>`
++ Alloc node now requries to specify a type, to prevent filling back wrong kinds of node.
 
 ## License
 

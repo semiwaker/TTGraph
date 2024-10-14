@@ -57,9 +57,9 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
-    let c = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
+    let c = alloc_node!(trans, Node::C);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -88,8 +88,8 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -117,8 +117,8 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -146,8 +146,8 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -175,8 +175,8 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -204,8 +204,8 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -239,9 +239,9 @@ mod test_link_type {
     let mut graph = Graph::<Node>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
-    let c = trans.alloc();
+    let a = alloc_node!(trans, Node::A);
+    let b = alloc_node!(trans, Node::B);
+    let c = alloc_node!(trans, Node::C);
     trans.fill_back(
       a,
       Node::A(NodeA {
@@ -327,7 +327,7 @@ mod test_link_type {
     g2: NodeIndex,
   }
 
-  node_enum!{
+  node_enum! {
     enum LR{
       Left1(Left1),
       Left2(Left2),
@@ -360,14 +360,14 @@ mod test_link_type {
     let mut graph = Graph::<LR>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let l1 = trans.alloc();
-    let l2 = trans.alloc();
-    let l3 = trans.alloc();
-    let l4 = trans.alloc();
-    let r1 = trans.alloc();
-    let r2 = trans.alloc();
-    let r3 = trans.alloc();
-    let r4 = trans.alloc();
+    let l1 = alloc_node!(trans, LR::Left1);
+    let l2 = alloc_node!(trans, LR::Left2);
+    let l3 = alloc_node!(trans, LR::Left3);
+    let l4 = alloc_node!(trans, LR::Left4);
+    let r1 = alloc_node!(trans, LR::Right1);
+    let r2 = alloc_node!(trans, LR::Right2);
+    let r3 = alloc_node!(trans, LR::Right3);
+    let r4 = alloc_node!(trans, LR::Right4);
 
     trans.fill_back(l1, LR::Left1(Left1 { g1: r1, g2: r3 }));
     trans.fill_back(l2, LR::Left2(Left2 { g1: r2, g2: r3 }));
@@ -389,14 +389,14 @@ mod test_link_type {
     let mut graph = Graph::<LR>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let l1 = trans.alloc();
-    let l2 = trans.alloc();
-    let l3 = trans.alloc();
-    let l4 = trans.alloc();
-    let r1 = trans.alloc();
-    let r2 = trans.alloc();
-    let r3 = trans.alloc();
-    let r4 = trans.alloc();
+    let l1 = alloc_node!(trans, LR::Left1);
+    let l2 = alloc_node!(trans, LR::Left2);
+    let l3 = alloc_node!(trans, LR::Left3);
+    let l4 = alloc_node!(trans, LR::Left4);
+    let r1 = alloc_node!(trans, LR::Right1);
+    let r2 = alloc_node!(trans, LR::Right2);
+    let r3 = alloc_node!(trans, LR::Right3);
+    let r4 = alloc_node!(trans, LR::Right4);
 
     trans.fill_back(l1, LR::Left1(Left1 { g1: r1, g2: r1 }));
     trans.fill_back(l2, LR::Left2(Left2 { g1: r2, g2: r3 }));
@@ -418,14 +418,14 @@ mod test_link_type {
     let mut graph = Graph::<LR>::new(&ctx);
     let mut trans = Transaction::new(&ctx);
 
-    let l1 = trans.alloc();
-    let l2 = trans.alloc();
-    let l3 = trans.alloc();
-    let l4 = trans.alloc();
-    let r1 = trans.alloc();
-    let r2 = trans.alloc();
-    let r3 = trans.alloc();
-    let r4 = trans.alloc();
+    let l1 = alloc_node!(trans, LR::Left1);
+    let l2 = alloc_node!(trans, LR::Left2);
+    let l3 = alloc_node!(trans, LR::Left3);
+    let l4 = alloc_node!(trans, LR::Left4);
+    let r1 = alloc_node!(trans, LR::Right1);
+    let r2 = alloc_node!(trans, LR::Right2);
+    let r3 = alloc_node!(trans, LR::Right3);
+    let r4 = alloc_node!(trans, LR::Right4);
 
     trans.fill_back(l1, LR::Left1(Left1 { g1: r1, g2: r3 }));
     trans.fill_back(l2, LR::Left2(Left2 { g1: r2, g2: r3 }));

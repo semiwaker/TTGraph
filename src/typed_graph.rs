@@ -6,7 +6,7 @@ use std::any::Any;
 // use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use std::sync::Arc;
+use std::iter::FusedIterator;
 
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,8 @@ use ordermap::{OrderMap, OrderSet};
 
 use uuid::Uuid;
 
-use crate::arena::{self, Arena, ArenaIndex};
+use crate::cate_arena::*;
+// use crate::arena::{self, Arena, ArenaIndex};
 use crate::id_distributer::IdDistributer;
 
 pub mod debug;
@@ -36,9 +37,7 @@ pub use ttgraph_macros::*;
 /// The index of a node, which implements [`Copy`].
 ///
 /// Note: The index is very independent to the [`Graph`], which does not check if it is realy pointing to a node in the graph.
-#[derive(
-  Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct NodeIndex(pub usize);
 
 impl NodeIndex {
@@ -71,11 +70,11 @@ impl Default for NodeIndex {
   }
 }
 
-impl ArenaIndex for NodeIndex {
-  fn new(id: usize) -> Self {
-    NodeIndex(id)
-  }
-}
+// impl ArenaIndex for NodeIndex {
+//   fn new(id: usize) -> Self {
+//     NodeIndex(id)
+//   }
+// }
 
 impl Display for NodeIndex {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -124,14 +123,21 @@ impl Display for NodeIndex {
 /// graph.commit(trans);
 /// # }
 /// ```
-#[derive(Clone)]
-pub struct Graph<NodeT: NodeEnum> {
+pub struct Graph<NodeT, Arena = <NodeT as NodeEnum>::GenArena>
+where
+  NodeT: NodeEnum,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
+{
   ctx_id: Uuid,
-  nodes: Arena<NodeIndex, NodeT>,
+  nodes: Arena,
   back_links: OrderMap<NodeIndex, OrderSet<(NodeIndex, NodeT::SourceEnum)>>,
 }
 
-impl<NodeT: NodeEnum> Graph<NodeT> {
+impl<NodeT, Arena> Graph<NodeT, Arena>
+where
+  NodeT: NodeEnum,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
+{
   /// Create an empty graph
   pub fn new(context: &Context) -> Self {
     Graph {
@@ -227,8 +233,56 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// }
   /// # }
   /// ```
-  pub fn iter(&self) -> Iter<'_, NodeT> {
+  pub fn iter(&self) -> Arena::Iter<'_> {
     self.nodes.iter()
+  }
+
+  /// Iterate a certain type of nodes denote by the discriminant.
+  /// Time complexity is only related to the number of nodes of that kind. It is backed by [`ordermap::OrderMap`] so it should be fast.
+  ///
+  /// # Example
+  /// ```
+  /// use ttgraph::*;
+  ///
+  /// #[derive(TypedNode)]
+  /// struct NodeA{
+  ///   a: usize
+  /// }
+  /// #[derive(TypedNode)]
+  /// struct NodeB{
+  ///   b: usize
+  /// }
+  ///
+  /// node_enum!{
+  ///   enum Node{
+  ///     A(NodeA),
+  ///     B(NodeB),
+  ///   }
+  /// }
+  ///
+  /// # fn main() {
+  /// let ctx = Context::new();
+  /// let mut graph = Graph::<Node>::new(&ctx);
+  /// let mut trans = Transaction::new(&ctx);
+  ///
+  /// trans.insert(Node::A(NodeA{ a: 1 }));
+  /// trans.insert(Node::A(NodeA{ a: 2 }));
+  /// trans.insert(Node::B(NodeB{ b: 0 }));
+  /// graph.commit(trans);
+  ///
+  /// for (_, node) in graph.iter_type(discriminant!(Node::A)){
+  ///   if let Node::A(a) = node {
+  ///     // Ok
+  ///   } else {
+  ///     panic!();
+  ///   }
+  /// }
+  /// # }
+  /// ```
+  pub fn iter_type<'a>(
+    &'a self, d: NodeT::Discriminant,
+  ) -> NodeIterator<'a, NodeT, ordermap::map::Iter<'a, usize, NodeT>> {
+    NodeIterator { iter: self.nodes.get_container(d).iter() }
   }
 
   /// Iterate all nodes within the named group
@@ -287,9 +341,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///  assert_eq!(Vec::from_iter(graph.iter_group("all").map(|(x, _)| x)), vec![a, b, c, d]);
   /// # }
   /// ```
-  pub fn iter_group(
-    &self, name: &'static str,
-  ) -> impl Iterator<Item = (NodeIndex, &NodeT)> {
+  pub fn iter_group(&self, name: &'static str) -> impl Iterator<Item = (NodeIndex, &NodeT)> {
     self.iter().filter(move |(_, n)| n.in_group(name))
   }
 
@@ -368,7 +420,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// graph.commit(trans);
   /// # }
   /// ```
-  pub fn commit(&mut self, t: Transaction<NodeT>) {
+  pub fn commit(&mut self, t: Transaction<NodeT, Arena>) {
     let lcr = self.do_commit(t);
     self.check_link_type(&lcr);
   }
@@ -377,7 +429,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   ///
   /// See [`GraphCheck`] for more information.
   #[cfg(feature = "debug")]
-  pub fn commit_checked(&mut self, t: Transaction<NodeT>, checks: &GraphCheck<NodeT>) {
+  pub fn commit_checked(&mut self, t: Transaction<NodeT, Arena>, checks: &GraphCheck<NodeT>) {
     let lcr = self.do_commit(t);
     self.check_link_type(&lcr);
     let result = self.check_change(&lcr, checks);
@@ -399,8 +451,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     let mut new_nodes = Arena::new(new_ctx.node_dist.clone());
     let mut id_map = OrderMap::new();
 
-    for (id, x) in self.nodes {
-      id_map.insert(id, new_nodes.insert(x));
+    for (id, x) in self.nodes.into_iter() {
+      let new_idx = new_nodes.insert(x);
+      id_map.insert(id, new_idx);
     }
 
     for (id, new_id) in &id_map {
@@ -425,12 +478,9 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   /// Check if all links are internal, just for debug
   #[cfg(feature = "debug")]
   pub fn check_integrity(&self) {
-    for (_, node) in &self.nodes {
+    for (_, node) in self.nodes.iter() {
       for (y, _) in node.iter_sources() {
-        debug_assert!(
-          self.get(y).is_some(),
-          "Found external link, integrity check failed!"
-        );
+        debug_assert!(self.get(y).is_some(), "Found external link, integrity check failed!");
       }
     }
   }
@@ -442,21 +492,17 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   #[cfg(feature = "debug")]
   #[doc(hidden)]
   pub fn check_backlinks(&self) {
-    let mut back_links: OrderMap<NodeIndex, OrderSet<(NodeIndex, NodeT::SourceEnum)>> =
-      OrderMap::new();
-    for (x, n) in &self.nodes {
+    let mut back_links: OrderMap<NodeIndex, OrderSet<(NodeIndex, NodeT::SourceEnum)>> = OrderMap::new();
+    for (x, n) in self.nodes.iter() {
       back_links.entry(x).or_default();
       for (y, s) in n.iter_sources() {
         back_links.entry(y).or_default().insert((x, s));
-        let links = self
-          .back_links
-          .get(&y)
-          .unwrap_or_else(|| panic!("Node {} have no backlink!", x.0));
+        let links = self.back_links.get(&y).unwrap_or_else(|| panic!("Node {} have no backlink!", x.0));
         debug_assert!(links.contains(&(x, s)));
       }
     }
     for (k, v) in back_links.iter() {
-      let Some(v2) = self.back_links.get(k) else {panic!("Key {:?} not in back_links {:?}", k, self.back_links)};
+      let Some(v2) = self.back_links.get(k) else { panic!("Key {:?} not in back_links {:?}", k, self.back_links) };
       if !v2.set_eq(v) {
         panic!("Backlink not equal {:?} expect {:?}", v2, v);
       }
@@ -466,37 +512,31 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   #[cfg(not(feature = "debug"))]
   pub fn check_backlinks(&self) {}
 
-  fn do_commit(&mut self, t: Transaction<NodeT>) -> LinkChangeRecorder<NodeT> {
-    debug_assert!(
-      t.ctx_id == self.ctx_id,
-      "The transaction and the graph are from different context!"
-    );
+  fn do_commit(&mut self, t: Transaction<NodeT, Arena>) -> LinkChangeRecorder<NodeT> {
+    debug_assert!(t.ctx_id == self.ctx_id, "The transaction and the graph are from different context!");
     debug_assert!(t.alloc_nodes.is_empty(), "There are unfilled allocated nodes");
 
     let mut lcr = LinkChangeRecorder::default();
 
     self.redirect_links_vec(t.redirect_links_vec, &mut lcr);
-    self.merge_nodes(t.inc_nodes,  &mut lcr);
+    self.merge_nodes(t.inc_nodes, &mut lcr);
     for (i, f) in t.mut_nodes {
-      self.modify_node(i, f,  &mut lcr);
+      self.modify_node(i, f, &mut lcr);
     }
     for (i, f) in t.update_nodes {
-      self.update_node(i, f,  &mut lcr);
+      self.update_node(i, f, &mut lcr);
     }
-    self.redirect_links_vec(t.redirect_all_links_vec,  &mut lcr);
+    self.redirect_links_vec(t.redirect_all_links_vec, &mut lcr);
     for n in &t.dec_nodes {
-      self.remove_node(*n,  &mut lcr);
+      self.remove_node(*n, &mut lcr);
     }
 
     self.apply_bidirectional_links(&lcr);
     lcr
   }
 
-  fn merge_nodes(
-    &mut self, nodes: Arena<NodeIndex, NodeT>,
-    lcr: &mut LinkChangeRecorder<NodeT>,
-  ) {
-    for (x, n) in &nodes {
+  fn merge_nodes(&mut self, nodes: Arena, lcr: &mut LinkChangeRecorder<NodeT>) {
+    for (x, n) in nodes.iter() {
       self.add_back_links(x, n);
       for (y, s) in n.iter_sources() {
         lcr.add_link(x, y, NodeT::to_link_mirror_enum(s));
@@ -506,10 +546,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     self.nodes.merge(nodes);
   }
 
-  fn remove_node(
-    &mut self, x: NodeIndex, 
-    lcr: &mut LinkChangeRecorder<NodeT>,
-  ) {
+  fn remove_node(&mut self, x: NodeIndex, lcr: &mut LinkChangeRecorder<NodeT>) {
     let n = self.nodes.remove(x).expect("Remove a non-existing node!");
     for (y, s) in n.iter_sources() {
       lcr.remove_link(x, y, NodeT::to_link_mirror_enum(s));
@@ -521,10 +558,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  fn modify_node<F>(
-    &mut self, x: NodeIndex, f: F, 
-    lcr: &mut LinkChangeRecorder<NodeT>,
-  ) where
+  fn modify_node<F>(&mut self, x: NodeIndex, f: F, lcr: &mut LinkChangeRecorder<NodeT>)
+  where
     F: FnOnce(&mut NodeT),
   {
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
@@ -540,10 +575,8 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  fn update_node<F>(
-    &mut self, x: NodeIndex, f: F, 
-    lcr: &mut LinkChangeRecorder<NodeT>,
-  ) where
+  fn update_node<F>(&mut self, x: NodeIndex, f: F, lcr: &mut LinkChangeRecorder<NodeT>)
+  where
     F: FnOnce(NodeT) -> NodeT,
   {
     for (y, s) in self.nodes.get(x).unwrap().iter_sources() {
@@ -559,28 +592,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  // fn add_bidirectional_link(
-  //   &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
-  // ) {
-  //   let to_add = self.nodes.get(x).unwrap().get_bidiretional_links();
-  //   for (ys, lms) in to_add {
-  //     bd.add(x, ys, &lms);
-  //   }
-  // }
-
-  // fn remove_bidirectional_link(
-  //   &mut self, x: NodeIndex, bd: &mut BidirectionalLinkRecorder<NodeT>,
-  // ) {
-  //   let to_remove = self.nodes.get(x).unwrap().get_bidiretional_links();
-  //   for (ys, lms) in to_remove {
-  //     bd.remove(x, ys, &lms);
-  //   }
-  // }
-
-  fn redirect_links(
-    &mut self, old_node: NodeIndex, new_node: NodeIndex,
-     lcr: &mut LinkChangeRecorder<NodeT>,
-  ) {
+  fn redirect_links(&mut self, old_node: NodeIndex, new_node: NodeIndex, lcr: &mut LinkChangeRecorder<NodeT>) {
     let old_link = self.back_links.remove(&old_node).unwrap();
     self.back_links.insert(old_node, OrderSet::new());
 
@@ -599,10 +611,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
     }
   }
 
-  fn redirect_links_vec(
-    &mut self, replacements: Vec<(NodeIndex, NodeIndex)>,
-     lcr: &mut LinkChangeRecorder<NodeT>,
-  ) {
+  fn redirect_links_vec(&mut self, replacements: Vec<(NodeIndex, NodeIndex)>, lcr: &mut LinkChangeRecorder<NodeT>) {
     let mut fa = OrderMap::new();
 
     for (old, new) in &replacements {
@@ -665,10 +674,10 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
       }
 
       let node = self.nodes.get(y).unwrap();
-      let found = bds.iter().any(|link|node.contains_link(*link, x));
+      let found = bds.iter().any(|link| node.contains_link(*link, x));
 
       if !found {
-        assert!(bds.len()==1, "Node with multiple choices for bidiretional link detected!");
+        assert!(bds.len() == 1, "Node with multiple choices for bidiretional link detected!");
         let link = bds.first().unwrap();
         if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
           self.add_back_link(y, x, NodeT::to_source_enum(*link));
@@ -701,21 +710,15 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   fn check_link_type(&self, lcr: &LinkChangeRecorder<NodeT>) {
     for (_, y, l) in &lcr.adds {
       if let Some(node) = self.nodes.get(*y) {
-        if let Result::Err(err) = NodeT::check_link_type(node.get_node_type_mirror(), *l)
-        {
-          panic!(
-            "Link type check failed! Link {:?} expect {:?}, found {:?}",
-            err.link, err.expect, err.found
-          );
+        if let Result::Err(err) = NodeT::check_link_type(node.discriminant(), *l) {
+          panic!("Link type check failed! Link {:?} expect {:?}, found {:?}", err.link, err.expect, err.found);
         }
       }
     }
   }
 
   #[cfg(feature = "debug")]
-  fn check_change<'a>(
-    &self, lcr: &LinkChangeRecorder<NodeT>, checks: &'a GraphCheck<NodeT>,
-  ) -> Vec<&'a str> {
+  fn check_change<'a>(&self, lcr: &LinkChangeRecorder<NodeT>, checks: &'a GraphCheck<NodeT>) -> Vec<&'a str> {
     let mut failed = Vec::new();
     let mut changed_nodes = OrderSet::new();
     for (x, _, _) in lcr.adds.iter().chain(lcr.removes.iter()) {
@@ -749,10 +752,7 @@ impl<NodeT: NodeEnum> Graph<NodeT> {
   }
 
   pub(crate) fn do_deserialize(ctx: &Context, nodes: Vec<(NodeIndex, NodeT)>) -> Self {
-    let mut arena = Arena::new(ctx.node_dist.clone());
-    for (idx, node) in nodes {
-      arena.fill_back(idx, node);
-    }
+    let arena = Arena::new_from_iter(ctx.node_dist.clone(), nodes);
     let mut lcr = LinkChangeRecorder::default();
     let mut graph = Self::new(ctx);
     graph.merge_nodes(arena, &mut lcr);
@@ -805,11 +805,8 @@ impl<NodeT: NodeEnum> Default for LinkChangeRecorder<NodeT> {
   }
 }
 
-type Iter<'a, NodeT> = arena::Iter<'a, NodeIndex, NodeT>;
-type IntoIter<NodeT> = arena::IntoIter<NodeIndex, NodeT>;
-
-impl<T: NodeEnum> IntoIterator for Graph<T> {
-  type IntoIter = IntoIter<T>;
+impl<T: NodeEnum, A: CateArena<V = T, D = T::Discriminant>> IntoIterator for Graph<T, A> {
+  type IntoIter = A::IntoIter;
   type Item = (NodeIndex, T);
 
   fn into_iter(self) -> Self::IntoIter {
@@ -817,13 +814,46 @@ impl<T: NodeEnum> IntoIterator for Graph<T> {
   }
 }
 
-impl<'a, T: NodeEnum + 'a> IntoIterator for &'a Graph<T> {
-  type IntoIter = Iter<'a, T>;
+impl<'a, T: NodeEnum + 'static, A: CateArena<V = T, D = T::Discriminant>> IntoIterator for &'a Graph<T, A> {
+  type IntoIter = A::Iter<'a>;
   type Item = (NodeIndex, &'a T);
 
   fn into_iter(self) -> Self::IntoIter {
     self.iter()
   }
+}
+
+pub struct NodeIterator<'a, V, I>
+where
+  V: NodeEnum + 'static,
+  I: Iterator<Item = (&'a usize, &'a V)> + ExactSizeIterator + FusedIterator,
+{
+  iter: I,
+}
+impl<'a, V, I> Iterator for NodeIterator<'a, V, I>
+where
+  V: NodeEnum + 'static,
+  I: Iterator<Item = (&'a usize, &'a V)> + ExactSizeIterator + FusedIterator,
+{
+  type Item = (NodeIndex, &'a V);
+  fn next(&mut self) -> Option<Self::Item> {
+    self.iter.next().map(|(k, v)| (NodeIndex(*k), v))
+  }
+  fn size_hint(&self) -> (usize, Option<usize>) {
+    self.iter.size_hint()
+  }
+}
+impl<'a, V, I> ExactSizeIterator for NodeIterator<'a, V, I>
+where
+  V: NodeEnum + 'static,
+  I: Iterator<Item = (&'a usize, &'a V)> + ExactSizeIterator + FusedIterator,
+{
+}
+impl<'a, V, I> FusedIterator for NodeIterator<'a, V, I>
+where
+  V: NodeEnum + 'static,
+  I: Iterator<Item = (&'a usize, &'a V)> + ExactSizeIterator + FusedIterator,
+{
 }
 
 /// Type alias to be used in [`mutate`](Transaction::mutate), intented to be used in macros
@@ -855,7 +885,6 @@ impl Context {
   }
 }
 
-
 // /// A trait intended to be used in macros
 // pub trait SourceIterator<T: TypedNode + ?Sized>:
 //   Iterator<Item = (NodeIndex, Self::Source)>
@@ -867,8 +896,8 @@ impl Context {
 /// A struct to hold errors found in link type check
 pub struct LinkTypeError<NodeT: NodeEnum + ?Sized> {
   pub link: NodeT::LoGMirrorEnum,
-  pub expect: &'static [NodeT::NodeTypeMirror],
-  pub found: NodeT::NodeTypeMirror,
+  pub expect: &'static [NodeT::Discriminant],
+  pub found: NodeT::Discriminant,
 }
 
 pub type LinkTypeCheckResult<NodeT> = Result<(), LinkTypeError<NodeT>>;

@@ -4,8 +4,8 @@
 
 #[cfg(test)]
 mod tests_typed {
+  use ::ordermap::OrderSet;
   use serde::{Deserialize, Serialize};
-  use std::collections::BTreeSet;
 
   use ttgraph::{
     serialize::{deserialize_graph, GraphSerializer},
@@ -51,7 +51,7 @@ mod tests_typed {
     }
 
     let mut trans = Transaction::new(&context);
-    let b = trans.alloc();
+    let b = alloc_node!(trans, MyNodeEnum::B);
     let a = trans.insert(MyNodeEnum::A(NodeA { to: b, name: "A".to_string() }));
     trans.fill_back(b, MyNodeEnum::B(NodeB { a, x: n, data1: 3 }));
 
@@ -76,12 +76,12 @@ mod tests_typed {
     println!("{:?}", get_node!(graph, MyNodeEnum::A, a).unwrap().data_ref_by_name::<String>("data1"));
     println!("{:?}", get_node!(graph, MyNodeEnum::B, b).unwrap().data_ref_by_name::<usize>("data1"));
     println!("{:?}", graph.get(b).unwrap().data_ref_by_name::<usize>("data1"));
-    // for (idx, n) in Edge::iter_by_type(graph) {}
+    println!("{:?}", discriminant!(MyNodeEnum::A));
   }
 
   #[derive(TypedNode, Debug, Serialize, Deserialize)]
   struct CNode {
-    tos: BTreeSet<NodeIndex>,
+    tos: OrderSet<NodeIndex>,
   }
 
   node_enum! {
@@ -97,13 +97,13 @@ mod tests_typed {
     let mut graph = Graph::<TestNode>::new(&context);
     let mut trans = Transaction::new(&context);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
-    let c = trans.alloc();
-    let d = trans.insert(TestNode::CNode(CNode { tos: BTreeSet::new() }));
-    trans.fill_back(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
-    trans.fill_back(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
-    trans.fill_back(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
+    let a = alloc_node!(trans, TestNode::CNode);
+    let b = alloc_node!(trans, TestNode::CNode);
+    let c = alloc_node!(trans, TestNode::CNode);
+    let d = trans.insert(TestNode::CNode(CNode { tos: OrderSet::new() }));
+    trans.fill_back(c, TestNode::CNode(CNode { tos: OrderSet::from_iter([d]) }));
+    trans.fill_back(b, TestNode::CNode(CNode { tos: OrderSet::from_iter([c, d]) }));
+    trans.fill_back(a, TestNode::CNode(CNode { tos: OrderSet::from_iter([b, c, d]) }));
 
     graph.commit(trans);
 
@@ -133,12 +133,12 @@ mod tests_typed {
     let mut graph = Graph::<TestNode>::new(&context);
     let mut trans = Transaction::<TestNode>::new(&context);
 
-    let a = trans.alloc();
-    let b = trans.alloc();
-    let c = trans.alloc();
-    let d = trans.insert(TestNode::CNode(CNode { tos: BTreeSet::new() }));
-    trans.fill_back(c, TestNode::CNode(CNode { tos: BTreeSet::from_iter([d]) }));
-    trans.fill_back(b, TestNode::CNode(CNode { tos: BTreeSet::from_iter([c, d]) }));
-    trans.fill_back(a, TestNode::CNode(CNode { tos: BTreeSet::from_iter([b, c, d]) }));
+    let a = alloc_node!(trans, TestNode::CNode);
+    let b = alloc_node!(trans, TestNode::CNode);
+    let c = alloc_node!(trans, TestNode::CNode);
+    let d = trans.insert(TestNode::CNode(CNode { tos: OrderSet::new() }));
+    trans.fill_back(c, TestNode::CNode(CNode { tos: OrderSet::from_iter([d]) }));
+    trans.fill_back(b, TestNode::CNode(CNode { tos: OrderSet::from_iter([c, d]) }));
+    trans.fill_back(a, TestNode::CNode(CNode { tos: OrderSet::from_iter([b, c, d]) }));
   }
 }

@@ -53,8 +53,7 @@
 //!
 //! + Direct link: `NodeIndex`
 //! + Vector link: `Vec<NodeIndex>`
-//! + Unordered set link: `HashSet<NodeIndex>`
-//! + Ordered set link: `BTreeSet<NodeIndex>`
+//! + Set link: `HashSet<NodeIndex>`, `BTreeSet<NodeIndex>`, `ordermap::OrderSet<NodeIndex>`, `indexmap::IndexSet<NodeIndex>`
 //!
 //! ## Graph and Transaction
 //!
@@ -99,8 +98,8 @@
 //! let mut trans = Transaction::new(&ctx);
 //! let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 //! let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
-//! let worker1 = trans.alloc();
-//! let worker2 = trans.alloc();
+//! let worker1 = alloc_node!(trans, Node::Worker);
+//! let worker2 = alloc_node!(trans, Node::Worker);
 //! let factory = trans.insert(Node::Factory(FactoryNode{
 //!   name: "Factory".to_string(),
 //!   workers: HashSet::from([worker1, worker2]),
@@ -268,7 +267,7 @@
 //! # }
 //! ```
 //!
-//! Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TTGraph does operations in transaction, we can first allocate a [`NodeIndex`] for the workers with method [`alloc`](Transaction::alloc), then fill the data back with method [`fill_back`](Transaction::fill_back). The transaction prevents dangling [`NodeIndex`] by checking all allocated nodes are filled back when committed.
+//! Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TTGraph does operations in transaction, we can first allocate a [`NodeIndex`] for the workers with macro [`alloc_node!`], then fill the data back with method [`fill_back`](Transaction::fill_back). The transaction prevents dangling [`NodeIndex`] by checking all allocated nodes are filled back when committed.
 //!
 //! ```rust
 //! # use ttgraph::*;
@@ -302,8 +301,8 @@
 //! # let mut trans = Transaction::new(&ctx);
 //! # let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 //! # let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
-//! let worker1 = trans.alloc();
-//! let worker2 = trans.alloc();
+//! let worker1 = alloc_node!(trans, Node::Worker);
+//! let worker2 = alloc_node!(trans, Node::Worker);
 //! let factory = trans.insert(Node::Factory(FactoryNode{
 //!   name: "Factory".to_string(),
 //!   workers: HashSet::from([worker1, worker2]),
@@ -356,8 +355,8 @@
 //! # let mut trans = Transaction::new(&ctx);
 //! # let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 //! # let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
-//! # let worker1 = trans.alloc();
-//! # let worker2 = trans.alloc();
+//! # let worker1 = alloc_node!(trans, Node::Worker);
+//! # let worker2 = alloc_node!(trans, Node::Worker);
 //! # let factory = trans.insert(Node::Factory(FactoryNode{
 //! #   name: "Factory".to_string(),
 //! #   workers: HashSet::from([worker1, worker2]),
@@ -460,7 +459,7 @@
 //!
 //! Rules of bidiretional links are:
 //!
-//! + Bidirectional links may be formed between: a pair of `NodeIndex`, between `NodeIndex` and `Set<NodeIndex>`, a pair of `Set<NodeIndex>`. (`Set` may be `HashSet` or `BTreeSet`, `Vec` is not supported currently)
+//! + Bidirectional links may be formed between: a pair of `NodeIndex`, between `NodeIndex` and `Set<NodeIndex>`, a pair of `Set<NodeIndex>`. (`Set` may be `HashSet`,`BTreeSet`,`OrderSet` or `IndexSet`, `Vec` is not supported currently)
 //! + When a link is added, the opposite side of the bidiretional link is checked. If the bidiretional link is already there, nothing happens. If that link have a place to be added, it is automatially added. Otherwise, it panics for conflict.
 //! + When a link is removed, the opposite side of the bidiretional link is checked. If the bidiretional link is there, it is removed. Otherwise, since TTGraph does not know if the user removes it on purpose, it is assumed that nothing should happen.
 //! + `NodeIndex` field: link can be added if it is [`NodeIndex::empty()`], otherwise it conflicts and panics. Link can be removed if it is not empty, but does not panic if it is.
@@ -770,14 +769,14 @@
 //! let mut graph = Graph::<LR>::new(&ctx);
 //! let mut trans = Transaction::new(&ctx);
 //!
-//! let l1 = trans.alloc();
-//! let l2 = trans.alloc();
-//! let l3 = trans.alloc();
-//! let l4 = trans.alloc();
-//! let r1 = trans.alloc();
-//! let r2 = trans.alloc();
-//! let r3 = trans.alloc();
-//! let r4 = trans.alloc();
+//! let l1 = alloc_node!(trans, LR::Left1);
+//! let l2 = alloc_node!(trans, LR::Left2);
+//! let l3 = alloc_node!(trans, LR::Left3);
+//! let l4 = alloc_node!(trans, LR::Left4);
+//! let r1 = alloc_node!(trans, LR::Right1);
+//! let r2 = alloc_node!(trans, LR::Right2);
+//! let r3 = alloc_node!(trans, LR::Right3);
+//! let r4 = alloc_node!(trans, LR::Right4);
 //!
 //! trans.fill_back(l1, LR::Left1(Left1 { g1: r1, g2: r3 }));
 //! trans.fill_back(l2, LR::Left2(Left2 { g1: r2, g2: r4 }));
@@ -891,7 +890,7 @@
 //! }
 //! # fn main() {
 //! let ctx = Context::new();
-//! let mut graph = Graph::new(&ctx);
+//! let mut graph = Graph::<XYNode>::new(&ctx);
 //! let mut trans = Transaction::new(&ctx);
 //!
 //! let y = trans.insert(XYNode::YNode(YNode{x1: NodeIndex::empty(), x2: NodeIndex::empty()}));
@@ -933,7 +932,7 @@
 //! # }
 //! # fn main() {
 //! let ctx = Context::new();
-//! let mut graph = Graph::new(&ctx);
+//! let mut graph = Graph::<XYNode>::new(&ctx);
 //! let mut trans = Transaction::new(&ctx);
 //!
 //! let x1 = trans.insert(XYNode::XNode(XNode{y: NodeIndex::empty()}));
@@ -957,7 +956,7 @@
 //! + Graph creation macro. A sub-language to simplify great amount of `alloc_node`, `fill_back_node` and `new_node` calls.
 //! + Graph transition. A way to conviently transit `Graph<NodeEnumA>` to `Graph<NodeEnumB>`, if `NodeEnumA` and `NodeEnumB` have a lot of common variants.
 
-pub mod arena;
+// pub mod arena;
 
 pub mod cate_arena;
 pub use cate_arena::*;

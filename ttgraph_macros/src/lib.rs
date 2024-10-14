@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use std::collections::BTreeMap;
 // use proc_macro2;
 use proc_macro_error::*;
-use quote::ToTokens;
-use syn::{parse2, parse_macro_input, parse_quote, Fields, Ident, Item, ItemStruct, Type};
+use quote::{quote, ToTokens};
+use syn::{parse2, parse_macro_input, parse_quote, Fields, Ident, Item, ItemStruct, Path, Type};
 
 mod node_enum;
 use node_enum::*;
@@ -125,10 +125,9 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
   let source_enum = make_source_enum(&mut generated, &generics, &vars, &enumt);
   let link_mirror_enum = make_link_mirror_enum(&mut generated, &generics, &vars, &enumt);
   let log_mirror_enum = make_log_mirror_enum(&mut generated, &generics, &vars, &enumt);
-  let node_type_mirror = make_node_type_mirror_enum(&mut generated, &vars, &enumt);
+  // let node_type_mirror = make_node_type_mirror_enum(&mut generated, &vars, &enumt);
   let discriminant = make_node_discriminant(&mut result, &vars, &enumt, &vis);
-  let node_index = make_node_index(&mut result, &vars, &enumt, &discriminant, &vis);
-  let cate_arena = make_cate_arena(&mut result, &vars, &enumt, &discriminant, &node_index, &vis);
+  let cate_arena = make_cate_arena(&mut result, &vars, &enumt, &discriminant, &vis);
   let gen_mod = make_generated_mod(&mut result, generated, &enumt, &vis);
 
   let bidirectional_links = expand_bidirectional_links(bidirectional_links, &groups);
@@ -140,9 +139,8 @@ pub fn node_enum(macro_input: TokenStream) -> TokenStream {
     &source_enum,
     &link_mirror_enum,
     &log_mirror_enum,
-    &node_type_mirror,
     &gen_mod,
-    &node_index,
+    &cate_arena,
     &discriminant,
     &bidirectional_links,
     &groups,
@@ -170,17 +168,33 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
   let mut groups = Vec::new();
   let mut group_map: BTreeMap<Ident, Vec<Ident>> = BTreeMap::new();
   let direct_paths = vec![parse_quote!(ttgraph::NodeIndex), parse_quote!(NodeIndex)];
-  let mut hset_paths = Vec::new();
-  let mut bset_paths = Vec::new();
+  let mut set_paths = Vec::new();
   let mut vec_paths = Vec::new();
   for dpath in &direct_paths {
-    hset_paths.push(parse_quote!(std::collections::HashSet<#dpath>));
-    hset_paths.push(parse_quote!(collections::HashSet<#dpath>));
-    hset_paths.push(parse_quote!(HashSet<#dpath>));
+    set_paths.push(parse_quote!(::std::collections::HashSet<#dpath>));
+    set_paths.push(parse_quote!(std::collections::HashSet<#dpath>));
+    set_paths.push(parse_quote!(collections::HashSet<#dpath>));
+    set_paths.push(parse_quote!(HashSet<#dpath>));
 
-    bset_paths.push(parse_quote!(std::collections::BTreeSet<#dpath>));
-    bset_paths.push(parse_quote!(collections::BTreeSet<#dpath>));
-    bset_paths.push(parse_quote!(BTreeSet<#dpath>));
+    set_paths.push(parse_quote!(::std::collections::BTreeSet<#dpath>));
+    set_paths.push(parse_quote!(std::collections::BTreeSet<#dpath>));
+    set_paths.push(parse_quote!(collections::BTreeSet<#dpath>));
+    set_paths.push(parse_quote!(BTreeSet<#dpath>));
+
+    set_paths.push(parse_quote!(::ordermap::set::OrderSet<#dpath>));
+    set_paths.push(parse_quote!(::ordermap::OrderSet<#dpath>));
+    set_paths.push(parse_quote!(ordermap::set::OrderSet<#dpath>));
+    set_paths.push(parse_quote!(ordermap::OrderSet<#dpath>));
+    set_paths.push(parse_quote!(map::OrderSet<#dpath>));
+    set_paths.push(parse_quote!(tgraph::ordermap::OrderSet<#dpath>));
+    set_paths.push(parse_quote!(OrderSet<#dpath>));
+
+    set_paths.push(parse_quote!(::indexmap::set::IndexSet<#dpath>));
+    set_paths.push(parse_quote!(::indexmap::IndexSet<#dpath>));
+    set_paths.push(parse_quote!(indexmap::set::IndexSet<#dpath>));
+    set_paths.push(parse_quote!(indexmap::IndexSet<#dpath>));
+    set_paths.push(parse_quote!(map::IndexSet<#dpath>));
+    set_paths.push(parse_quote!(IndexSet<#dpath>));
 
     vec_paths.push(parse_quote!(std::vec::Vec<#dpath>));
     vec_paths.push(parse_quote!(vec::Vec<#dpath>));
@@ -194,11 +208,8 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
       if direct_paths.contains(p) {
         links.push(LinkType::Direct(ident.clone(), upper_camel(&ident)));
         is_link = true;
-      } else if hset_paths.contains(p) {
-        links.push(LinkType::HSet(ident.clone(), upper_camel(&ident)));
-        is_link = true;
-      } else if bset_paths.contains(p) {
-        links.push(LinkType::BSet(ident.clone(), upper_camel(&ident)));
+      } else if set_paths.contains(p) {
+        links.push(LinkType::Set(ident.clone(), upper_camel(&ident)));
         is_link = true;
       } else if vec_paths.contains(p) {
         links.push(LinkType::Vec(ident.clone(), upper_camel(&ident)));
@@ -281,6 +292,27 @@ pub fn typed_node(input: TokenStream) -> TokenStream {
   .to_tokens(&mut result);
 
   result.into()
+}
+
+/// Get a discriminant for a type, `discriminant!(Node::Type)`, returns `<Node as NodeEnum>::Discriminant::Type`
+#[proc_macro]
+#[proc_macro_error]
+pub fn discriminant(input: TokenStream) -> TokenStream {
+  let p: Path = parse_macro_input!(input);
+  if p.segments.len() < 2 {
+    abort!(p, "Requires a path to a variant of a NodeEnum");
+  }
+  let mut segs = p.segments.clone();
+  let last = segs.pop().unwrap().into_tuple().0;
+  segs.pop_punct();
+  let s = Path {
+    leading_colon: p.leading_colon,
+    segments: segs,
+  };
+  quote! {
+    <#s as ttgraph::NodeEnum>::Discriminant::#last
+  }
+  .into()
 }
 
 // /// Mark a phantom group (a group that does not have a link) in a TypedNode

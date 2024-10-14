@@ -1,6 +1,7 @@
 use visible::StructFields;
 
 use super::*;
+use crate::{CateArena, Discriminated, NodeDiscriminant};
 
 /// A helper trait for the graph to trace all links in the nodes
 /// Intented to be automatically derived, may be unstable.
@@ -20,48 +21,17 @@ use super::*;
 /// }
 /// ```
 pub trait TypedNode {
-  type Source: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
-  type LinkMirror: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
-  type LoGMirror: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
+  type Source: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
+  type LinkMirror: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
+  type LoGMirror: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
   // type Iter: SourceIterator<Self, Source = Self::Source>;
 
   /// Iterate the links and its source reflection
   fn iter_sources(&self) -> std::vec::IntoIter<(NodeIndex, Self::Source)>;
   /// Iterate the linked node of the specified link
-  fn iter_links(
-    &self, link: Self::LinkMirror,
-  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  fn iter_links(&self, link: Self::LinkMirror) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Modify a link by source, return (remove_sucess, add_success)
-  fn modify_link(
-    &mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex,
-  ) -> (bool, bool);
+  fn modify_link(&mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex) -> (bool, bool);
   /// Add a link, designed for bidirectional links, return true if the link is actually added
   fn add_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
   /// Remove a link, designed for bidirectional links, return true if the link is actually removed
@@ -76,9 +46,7 @@ pub trait TypedNode {
   /// Get the name of the links
   fn link_names() -> &'static [&'static str];
   /// Get the links by name
-  fn get_links_by_name(
-    &self, name: &'static str,
-  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  fn get_links_by_name(&self, name: &'static str) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Get the links by group name
   fn get_links_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
 
@@ -123,54 +91,16 @@ pub trait TypedNode {
 /// }
 /// # fn main() {}
 /// ```
-pub trait NodeEnum {
-  type SourceEnum: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
-  type LinkMirrorEnum: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
-  type LoGMirrorEnum: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
-  type NodeTypeMirror: Copy
-    + Clone
-    + Eq
-    + PartialEq
-    + Debug
-    + Hash
-    + PartialOrd
-    + Ord
-    + Sized
-    + 'static;
-  fn get_node_type_mirror(&self) -> Self::NodeTypeMirror;
+pub trait NodeEnum: Discriminated<Self::Discriminant> {
+  type SourceEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
+  type LinkMirrorEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
+  type LoGMirrorEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
+  type Discriminant: NodeDiscriminant;
+  type GenArena: CateArena<V = Self, D = Self::Discriminant> + Sized + 'static;
   /// Iterate the links and its source reflection
   fn iter_sources(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>>;
   /// Iterate the links and its link reflection
-  fn iter_links(
-    &self, link: Self::LinkMirrorEnum,
-  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  fn iter_links(&self, link: Self::LinkMirrorEnum) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Modify a link by source
   fn modify_link(
     &mut self, source: Self::SourceEnum, old_idx: NodeIndex, new_idx: NodeIndex,
@@ -185,9 +115,7 @@ pub trait NodeEnum {
   fn contains_link(&self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
 
   /// Get the links by name
-  fn get_links_by_name(
-    &self, name: &'static str,
-  ) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
+  fn get_links_by_name(&self, name: &'static str) -> Box<dyn Iterator<Item = NodeIndex> + '_>;
   /// Get the links by group name
   fn get_links_by_group(&self, name: &'static str) -> Vec<NodeIndex>;
 
@@ -216,32 +144,21 @@ pub trait NodeEnum {
   /// Get the opposite links of the specified link
   /// Returns: Vec<link>, these types of links are the opposite side of the specified link
   /// Returns nothing if the link type does not match the node type
-  fn get_bidiretional_link_mirrors_of(
-    &self, link: Self::LinkMirrorEnum,
-  ) -> Vec<Self::LinkMirrorEnum> {
-    Self::to_log_mirror_enums(link)
-      .into_iter()
-      .flat_map(|x| self.get_bidiretional_link_mirrors_of_log(x))
-      .collect()
+  fn get_bidiretional_link_mirrors_of(&self, link: Self::LinkMirrorEnum) -> Vec<Self::LinkMirrorEnum> {
+    Self::to_log_mirror_enums(link).into_iter().flat_map(|x| self.get_bidiretional_link_mirrors_of_log(x)).collect()
   }
 
   /// Get the opposite links of the specified link or group
-  fn get_bidiretional_link_mirrors_of_log(
-    &self, link: Self::LoGMirrorEnum,
-  ) -> Vec<Self::LinkMirrorEnum>;
+  fn get_bidiretional_link_mirrors_of_log(&self, link: Self::LoGMirrorEnum) -> Vec<Self::LinkMirrorEnum>;
 
-  fn check_link_type(
-    target: Self::NodeTypeMirror, link: Self::LinkMirrorEnum,
-  ) -> LinkTypeCheckResult<Self> {
+  fn check_link_type(target: Self::Discriminant, link: Self::LinkMirrorEnum) -> LinkTypeCheckResult<Self> {
     for l in Self::to_log_mirror_enums(link) {
       Self::check_link_type_by_group(target, l)?;
     }
     Ok(())
   }
 
-  fn check_link_type_by_group(
-    target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum,
-  ) -> LinkTypeCheckResult<Self>;
+  fn check_link_type_by_group(target: Self::Discriminant, link: Self::LoGMirrorEnum) -> LinkTypeCheckResult<Self>;
 
   fn match_bd_link_group(&self, links: Vec<Self::LinkMirrorEnum>) -> Vec<Self::LinkMirrorEnum>;
 }
@@ -261,8 +178,7 @@ pub struct ModifyResult<LinkMirrorT> {
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum LinkType {
   Point, // Single NodeIndex
-  HSet,  // HashSet
-  BSet,  // BTreeSet
+  Set,  // HashSet or BTreeSet or OrderSet or IndexSet
   Vec,   // Vec,
          // Enum
 }

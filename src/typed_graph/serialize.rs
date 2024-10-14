@@ -43,16 +43,20 @@ use serde::{
 
 /// Helper struct to serialzie and deserialzie a [`Graph`]
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GraphSerializer<NodeT: NodeEnum> {
+pub struct GraphSerializer<NodeT>
+where
+  NodeT: NodeEnum,
+{
   ctx_id: Uuid,
   nodes: Vec<(NodeIndex, NodeT)>,
 }
 
-impl<NodeT> From<Graph<NodeT>> for GraphSerializer<NodeT>
+impl<NodeT, Arena> From<Graph<NodeT, Arena>> for GraphSerializer<NodeT>
 where
   NodeT: NodeEnum,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
 {
-  fn from(value: Graph<NodeT>) -> GraphSerializer<NodeT> {
+  fn from(value: Graph<NodeT, Arena>) -> GraphSerializer<NodeT> {
     GraphSerializer {
       ctx_id: value.ctx_id,
       nodes: Vec::from_iter(value.into_iter()),
@@ -60,13 +64,15 @@ where
   }
 }
 
-struct NodeSerialize<'a, NodeT>(Iter<'a, NodeT>)
+struct NodeSerialize<'a, NodeT, Arena>(Arena::Iter<'a>)
 where
-  NodeT: 'a + NodeEnum + Serialize;
+  NodeT: NodeEnum + Serialize + 'static,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>;
 
-impl<'a, NodeT> Serialize for NodeSerialize<'a, NodeT>
+impl<'a, NodeT, Arena> Serialize for NodeSerialize<'a, NodeT, Arena>
 where
-  NodeT: NodeEnum + Serialize + 'a,
+  NodeT: NodeEnum + Serialize + 'static,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
@@ -80,9 +86,10 @@ where
   }
 }
 
-impl<NodeT> Serialize for Graph<NodeT>
+impl<NodeT, Arena> Serialize for Graph<NodeT, Arena>
 where
-  NodeT: NodeEnum + Serialize,
+  NodeT: NodeEnum + Serialize + 'static,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
 {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
@@ -90,7 +97,7 @@ where
   {
     let mut graph = serializer.serialize_struct("Graph", 2)?;
     graph.serialize_field("ctx_id", &self.ctx_id)?;
-    graph.serialize_field("nodes", &NodeSerialize(self.iter()))?;
+    graph.serialize_field("nodes", &NodeSerialize::<NodeT, Arena>(self.iter()))?;
     graph.end()
   }
 }

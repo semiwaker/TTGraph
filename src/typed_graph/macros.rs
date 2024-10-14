@@ -1,5 +1,7 @@
 // use super::*;
 
+pub use paste::paste;
+
 /// Get a node from the graph, assume it is $var variant of the NodeEnum. Returns `Option<&NodeType>`
 ///
 /// # Example
@@ -74,7 +76,7 @@ macro_rules! get_node {
 /// trans.insert(MyNodeEnum::B(NodeB{ b: 0 }));
 /// graph.commit(trans);
 ///
-/// let iterator = iter_nodes!(graph, MyNodeEnum::A);
+/// let iterator = iter_nodes!(graph, crate::MyNodeEnum::A);
 /// // a: (NodeIndex, &NodeA)
 /// for (i, a) in (1..3).zip(iterator) {
 ///   assert_eq!(i, a.1.a)
@@ -83,16 +85,8 @@ macro_rules! get_node {
 /// ```
 #[macro_export]
 macro_rules! iter_nodes {
-  ($graph: expr, $var: path) => {
-    $graph.iter().filter_map(
-      |(idx, node)| {
-        if let $var(x) = node {
-          Some((idx, x))
-        } else {
-          None
-        }
-      },
-    )
+  ($graph: expr, $p: path) => {
+    $graph.iter_type($crate::discriminant!($p)).map(|(idx, node)| if let $p(x) = node { (idx, x) } else { panic!() })
   };
 }
 
@@ -245,3 +239,48 @@ macro_rules! update_node {
     })
   };
 }
+
+/// Allocate a new [`NodeIndex`](crate::NodeIndex) for a new node of certain type. `alloc_node!(transaction, Node::Type)`
+///
+/// See [`alloc`](crate::Transaction::alloc) for more information
+#[macro_export]
+macro_rules! alloc_node {
+  ($transaction: expr, $p: path) => {
+    $transaction.alloc($crate::discriminant!($p))
+  };
+}
+
+// /// Get a discriminant for a type
+// /// # Example
+// /// ```rust
+// /// use ttgraph::*;
+// ///
+// /// #[derive(TypedNode)]
+// /// struct NodeA{ }
+// ///
+// /// #[derive(TypedNode)]
+// /// struct NodeB{ }
+// ///
+// /// node_enum!{
+// ///   enum MyNodeEnum{
+// ///     A(NodeA),
+// ///     B(NodeB),
+// ///   }
+// /// }
+// ///
+// /// # fn main() {
+// /// println!("{:?}", discriminant!(MyNodeEnum::A)); // A
+// /// println!("{:?}", discriminant!(MyNodeEnum::B)); // B
+// /// # }
+// /// ```
+// #[macro_export]
+// macro_rules! discriminant {
+//   ($($ps:tt)+, $field:tt) => {
+//     $crate::macros::paste! {
+//       [<$($ps)::* Discriminant>]::$field
+//     }
+//   };
+//   ($($a:tt)::+) => {
+//     $crate::discriminant!($($a),*)
+//   };
+// }

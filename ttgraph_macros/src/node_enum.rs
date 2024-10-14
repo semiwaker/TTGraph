@@ -67,35 +67,29 @@ pub(crate) fn make_log_mirror_enum(
   log_mirror_enum
 }
 
-pub(crate) fn make_node_type_mirror_enum(result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident) -> Ident {
-  let enum_name = format_ident!("{}NodeTypeMirror", enumt);
-  let mut v = Vec::new();
-  for (ident, _) in vars {
-    v.push(quote! {#ident,});
-  }
+// pub(crate) fn make_node_type_mirror_enum(result: &mut TokenStream, vars: &Vec<(Ident, Type)>, enumt: &Ident) -> Ident {
+//   let enum_name = format_ident!("{}NodeTypeMirror", enumt);
+//   let mut v = Vec::new();
+//   for (ident, _) in vars {
+//     v.push(quote! {#ident,});
+//   }
 
-  quote! {
-    #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
-    pub enum #enum_name{
-      #(#v)*
-    }
-  }
-  .to_tokens(result);
+//   quote! {
+//     #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, PartialOrd, Ord)]
+//     pub enum #enum_name{
+//       #(#v)*
+//     }
+//   }
+//   .to_tokens(result);
 
-  enum_name
-}
+//   enum_name
+// }
 
 pub(crate) fn make_node_enum(
   result: &mut TokenStream, generics: &Generics, vars: &Vec<(Ident, Type)>, enumt: &Ident, source_enum: &Ident,
-  link_mirror_enum: &Ident, log_mirror_enum: &Ident, node_type_mirror: &Ident, gen_mod: &Ident, node_index: &Ident,
-  discriminant: &Ident, bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup],
-  type_annotations: Vec<TypeAnnotation>,
+  link_mirror_enum: &Ident, log_mirror_enum: &Ident, gen_mod: &Ident, cate_arena: &Ident, discriminant: &Ident,
+  bidirectional_links: &[BidirectionalLink], groups: &[NamedGroup], type_annotations: Vec<TypeAnnotation>,
 ) {
-  let mut get_node_type_arms = Vec::new();
-  for (ident, _) in vars {
-    get_node_type_arms.push(quote! {Self::#ident(_) => Self::NodeTypeMirror::#ident,})
-  }
-
   let mut iter_src_arms = Vec::new();
   for (ident, ty) in vars {
     iter_src_arms.push(quote! { Self::#ident(x) => Box::new(
@@ -254,12 +248,8 @@ pub(crate) fn make_node_enum(
       type SourceEnum = #gen_mod::#source_enum #ty_generics;
       type LinkMirrorEnum = #gen_mod::#link_mirror_enum #ty_generics;
       type LoGMirrorEnum = #gen_mod::#log_mirror_enum #ty_generics;
-      type NodeTypeMirror = #gen_mod::#node_type_mirror;
-      fn get_node_type_mirror(&self) -> Self::NodeTypeMirror {
-        match self{
-          #(#get_node_type_arms)*
-        }
-      }
+      type Discriminant = #discriminant;
+      type GenArena = #cate_arena;
       fn iter_sources(&self) -> Box<dyn Iterator<Item = (NodeIndex, Self::SourceEnum)>> {
         match self {
           #(#iter_src_arms)*
@@ -346,12 +336,6 @@ pub(crate) fn make_node_enum(
         }
         result
       }
-    }
-
-    #[automatically_derived]
-    impl ttgraph::CateNode for #enumt {
-      type D = #discriminant;
-      type Index = #node_index;
     }
 
     #[automatically_derived]

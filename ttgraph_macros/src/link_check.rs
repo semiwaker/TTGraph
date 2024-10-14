@@ -90,8 +90,8 @@ pub(crate) fn make_check_link_type(
         let mut var2_arms = Vec::new();
         let mut expect = Vec::new();
         for v2 in var2 {
-          var2_arms.push(quote! {Self::NodeTypeMirror::#v2});
-          expect.push(quote! {Self::NodeTypeMirror::#v2});
+          var2_arms.push(quote! {Self::Discriminant::#v2});
+          expect.push(quote! {Self::Discriminant::#v2});
         }
 
         link_arms.push(quote! {
@@ -114,7 +114,7 @@ pub(crate) fn make_check_link_type(
     }
   }
   quote! {
-    fn check_link_type_by_group(target: Self::NodeTypeMirror, link: Self::LoGMirrorEnum) -> ttgraph::LinkTypeCheckResult<Self> {
+    fn check_link_type_by_group(target: Self::Discriminant, link: Self::LoGMirrorEnum) -> ttgraph::LinkTypeCheckResult<Self> {
       match link {
         #(#arms)*
       }

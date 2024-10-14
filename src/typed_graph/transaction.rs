@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use ordermap::OrderSet;
 
 use visible::StructFields;
 
@@ -9,18 +9,26 @@ use super::*;
 ///
 /// The transaction and the graph should have been created from the same [`Context`] to ensure correctness.
 #[StructFields(pub(crate))]
-pub struct Transaction<'a, NodeT: NodeEnum> {
+pub struct Transaction<'a, NodeT, Arena = <NodeT as NodeEnum>::GenArena>
+where
+  NodeT: NodeEnum,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
+{
   ctx_id: Uuid,
-  alloc_nodes: BTreeSet<NodeIndex>,
-  inc_nodes: Arena<NodeIndex, NodeT>,
-  dec_nodes: BTreeSet<NodeIndex>,
+  alloc_nodes: OrderSet<NodeIndex>,
+  inc_nodes: Arena,
+  dec_nodes: OrderSet<NodeIndex>,
   mut_nodes: Vec<(NodeIndex, MutFunc<'a, NodeT>)>,
   update_nodes: Vec<(NodeIndex, UpdateFunc<'a, NodeT>)>,
   redirect_all_links_vec: Vec<(NodeIndex, NodeIndex)>,
   redirect_links_vec: Vec<(NodeIndex, NodeIndex)>,
 }
 
-impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
+impl<'a, NodeT, Arena> Transaction<'a, NodeT, Arena>
+where
+  NodeT: NodeEnum,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant>,
+{
   /// Make a empty transaction
   ///
   /// Please ensure the [`Graph`] and the [`Transaction`] use the same Context!
@@ -51,9 +59,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
     let node_dist = context.node_dist.clone();
     Transaction {
       ctx_id: context.id,
-      alloc_nodes: BTreeSet::new(),
+      alloc_nodes: OrderSet::new(),
       inc_nodes: Arena::new(node_dist),
-      dec_nodes: BTreeSet::new(),
+      dec_nodes: OrderSet::new(),
       mut_nodes: Vec::new(),
       update_nodes: Vec::new(),
       redirect_all_links_vec: Vec::new(),
@@ -62,11 +70,14 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 
   /// Allocate a new [`NodeIndex`] for a new node, use together with [`fill_back`](Transaction::fill_back)
+  /// 
+  /// A discriminant is required to denote the type of the node, which can be acquired by the [`discriminant!`](crate::discriminant!) macro. Use [`alloc_node!`](crate::alloc_node) is simplier.
   ///
   /// Useful when there is a cycle.
   ///
   /// # Panic
-  /// If there is a node that is allocaed, but is not filled back, it is detected and panic to warn the user.
+  /// If there is a node that is allocated, but is not filled back, it will be detected when commit.
+  /// 
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -86,9 +97,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// // Alloc some nodes
-  /// let n1 = trans.alloc();
-  /// let n2 = trans.alloc();
-  /// let n3 = trans.alloc();
+  /// let n1 = trans.alloc(discriminant!(Node::A));
+  /// let n2 = alloc_node!(trans, Node::A);
+  /// let n3 = alloc_node!(trans, Node::A);
   /// // Build a circle
   /// trans.fill_back(n1, Node::A(NodeA{ last: n3, next: n2 }));
   /// trans.fill_back(n2, Node::A(NodeA{ last: n1, next: n3 }));
@@ -96,8 +107,44 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// graph.commit(trans);
   /// # }
   /// ```
-  pub fn alloc(&mut self) -> NodeIndex {
-    let idx = self.inc_nodes.alloc();
+  pub fn alloc(&mut self, d: NodeT::Discriminant) -> NodeIndex {
+    let idx = self.inc_nodes.alloc(d);
+    self.alloc_nodes.insert(idx);
+    idx
+  }
+
+  /// Similar to [`alloc`](Transaction::alloc) but does not require a type. Use [`fill_back_untyped`](Transaction::fill_back_untyped) to fill back.
+  /// # Example
+  /// ```
+  /// use ttgraph::*;
+  /// #[derive(TypedNode)]
+  /// struct NodeA{
+  ///   last: NodeIndex,
+  ///   next: NodeIndex,
+  /// }
+  /// node_enum!{
+  ///   enum Node{
+  ///     A(NodeA)
+  ///   }
+  /// }
+  ///
+  /// # fn main() {
+  /// let ctx = Context::new();
+  /// let mut graph = Graph::<Node>::new(&ctx);
+  /// let mut trans = Transaction::new(&ctx);
+  /// // Alloc some nodes
+  /// let n1 = trans.alloc_untyped();
+  /// let n2 = trans.alloc_untyped();
+  /// let n3 = trans.alloc_untyped();
+  /// // Build a circle
+  /// trans.fill_back_untyped(n1, Node::A(NodeA{ last: n3, next: n2 }));
+  /// trans.fill_back_untyped(n2, Node::A(NodeA{ last: n1, next: n3 }));
+  /// trans.fill_back_untyped(n3, Node::A(NodeA{ last: n2, next: n1 }));
+  /// graph.commit(trans);
+  /// # }
+  /// ```
+  pub fn alloc_untyped(&mut self) -> NodeIndex {
+    let idx = self.inc_nodes.alloc_untyped();
     self.alloc_nodes.insert(idx);
     idx
   }
@@ -105,6 +152,12 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Fill back the data to a [`NodeIndex`] created by [`alloc`](Transaction::alloc)
   pub fn fill_back(&mut self, idx: NodeIndex, data: NodeT) {
     self.inc_nodes.fill_back(idx, data);
+    self.alloc_nodes.remove(&idx);
+  }
+
+  /// Fill back the data to a [`NodeIndex`] created by [`alloc_untyped`](Transaction::alloc_untyped)
+  pub fn fill_back_untyped(&mut self, idx: NodeIndex, data: NodeT) {
+    self.inc_nodes.fill_back_untyped(idx, data);
     self.alloc_nodes.remove(&idx);
   }
 
@@ -140,6 +193,8 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// Remove an existing node
   ///
   /// Note: nodes created by [`insert`](Transaction::insert) and [`alloc`](Transaction::alloc) in this uncommitted transaction can also be removed.
+  ///
+  /// Currently backed by [OrderMap::swap_remove] for performance, the order is changed after remove.
   ///
   /// Example:
   /// ```
@@ -189,7 +244,6 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// node_enum!{
   ///   enum Node{
   ///     A(NodeA),
-  ///     B(NodeA),
   ///   }
   /// }
   ///
@@ -225,12 +279,13 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
       func(self.inc_nodes.get_mut(node).unwrap());
     } else {
       self.mut_nodes.push((node, Box::new(func)));
-    }
-  }
+    }  }
 
   /// Update a node with a closure `FnOnce(NodeT) -> NodeT`.
   ///
   /// If the type of the node is previously known, use [`update_node!`](crate::update_node!) instead.
+  ///
+  /// The node is taken out of the container and will be put back after updating, so the order is changed.
   ///
   /// # Example
   /// ```
@@ -242,7 +297,6 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// node_enum!{
   ///   enum Node{
   ///     A(NodeA),
-  ///     B(NodeA),
   ///   }
   /// }
   ///
@@ -306,9 +360,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// let context = Context::new();
   /// let mut graph = Graph::<Node>::new(&context);
   /// let mut trans = Transaction::new(&context);
-  /// let a = trans.alloc();
-  /// let b = trans.alloc();
-  /// let c = trans.alloc();
+  /// let a = alloc_node!(trans, Node::A);
+  /// let b = alloc_node!(trans, Node::A);
+  /// let c = alloc_node!(trans, Node::A);
   /// let d = trans.insert(Node::A(NodeA { tos: BTreeSet::new() }));
   /// trans.fill_back(c, Node::A(NodeA { tos: BTreeSet::from_iter([d]) }));
   /// trans.fill_back(b, Node::A(NodeA { tos: BTreeSet::from_iter([c, d]) }));
@@ -358,9 +412,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// let context = Context::new();
   /// let mut graph = Graph::<Node>::new(&context);
   /// let mut trans = Transaction::new(&context);
-  /// let a = trans.alloc();
-  /// let b = trans.alloc();
-  /// let c = trans.alloc();
+  /// let a = alloc_node!(trans, Node::A);
+  /// let b = alloc_node!(trans, Node::A);
+  /// let c = alloc_node!(trans, Node::A);
   /// let d = trans.insert(Node::A(NodeA { tos: BTreeSet::new() }));
   /// trans.fill_back(c, Node::A(NodeA { tos: BTreeSet::from_iter([d]) }));
   /// trans.fill_back(b, Node::A(NodeA { tos: BTreeSet::from_iter([c, d]) }));
@@ -439,11 +493,9 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   /// assert!(graph3.get(n2).is_some());
   /// # }
   /// ```
-  pub fn merge(&mut self, graph: Graph<NodeT>) {
+  pub fn merge(&mut self, graph: Graph<NodeT, Arena>) {
     assert!(self.ctx_id == graph.ctx_id);
-    for (i, n) in graph.into_iter() {
-      self.fill_back(i, n);
-    }
+    self.inc_nodes.merge(graph.nodes);
   }
 
   /// Give up the transaction. Currently if a transaction is dropped without commit, it does not give a warning or panic. This issue may be fixed in the future.
@@ -477,7 +529,11 @@ impl<'a, NodeT: NodeEnum> Transaction<'a, NodeT> {
   }
 }
 
-impl<'a, NodeT: NodeEnum + Debug> Debug for Transaction<'a, NodeT> {
+impl<'a, NodeT: NodeEnum, Arena> Debug for Transaction<'a, NodeT, Arena>
+where
+  NodeT: NodeEnum + Debug,
+  Arena: CateArena<V = NodeT, D = NodeT::Discriminant> + Debug,
+{
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct(&format!("Transaction<{}>", std::any::type_name::<NodeT>()))
       .field("ctx_id", &self.ctx_id)
