@@ -527,6 +527,34 @@ where
   pub fn give_up(self) {
     drop(self);
   }
+
+  /// Check if nothing has been done in this transaction
+  /// # Example
+  /// ```rust
+  /// use ttgraph::*;
+  /// #[derive(TypedNode)]
+  /// struct NodeA{
+  ///   data: usize,
+  /// }
+  /// node_enum!{
+  ///   enum Node{
+  ///     A(NodeA)
+  ///   }
+  /// }
+  /// 
+  /// # fn main() {
+  /// let ctx = Context::new();
+  /// let mut graph = Graph::new(&ctx);
+  /// let mut trans = Transaction::<Node>::new(&ctx);
+  /// assert!(trans.is_empty());
+  /// let idx = trans.insert(Node::A(NodeA{data: 1}));
+  /// assert!(!trans.is_empty());
+  /// graph.commit(trans);
+  /// # }
+  /// ```
+  pub fn is_empty(&self) -> bool {
+    self.alloc_nodes.is_empty() && self.inc_nodes.len() == 0 && self.dec_nodes.is_empty() && self.mut_nodes.is_empty() && self.update_nodes.is_empty() && self.redirect_links_vec.is_empty() && self.redirect_all_links_vec.is_empty()
+  }
 }
 
 impl<'a, NodeT: NodeEnum, Arena> Debug for Transaction<'a, NodeT, Arena>
