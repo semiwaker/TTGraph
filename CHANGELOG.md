@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.2 (2024-11-15)
+
+### New Features
+
+ - <csr-id-be55593c14517072852a3ace6160f70936b4b1a3/> Transaction::is_empty()
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 31 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Transaction::is_empty() ([`be55593`](https://github.com/semiwaker/TTGraph/commit/be55593c14517072852a3ace6160f70936b4b1a3))
+</details>
+
 ## 0.4.1 (2024-10-14)
 
 ### Bug Fixes

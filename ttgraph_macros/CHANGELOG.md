@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.1 (2024-11-15)
+
+### Bug Fixes
+
+ - <csr-id-4a89e9b8ed1e5936b218b0ef1ef2940c5bcfbb27/> Vec<NodeIndex> contains NodeIndex::empty
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 32 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Vec<NodeIndex> contains NodeIndex::empty ([`4a89e9b`](https://github.com/semiwaker/TTGraph/commit/4a89e9b8ed1e5936b218b0ef1ef2940c5bcfbb27))
+</details>
+
 ## 0.4.0 (2024-10-14)
 
 ### New Features
@@ -16,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 21 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -28,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.4.0, ttgraph v0.4.0 ([`29288cd`](https://github.com/semiwaker/TTGraph/commit/29288cdc27df10813af869443cb1fbb2a65861a5))
     - BREAKING CHANGE: performance improve & alloc() requires type ([`384c34d`](https://github.com/semiwaker/TTGraph/commit/384c34dfc5fc43385cdd64533e0b02e92b328085))
     - Cate_arena derive macro runnable ([`2bfd5ca`](https://github.com/semiwaker/TTGraph/commit/2bfd5ca57ae71dc42b709dd44c199ddf8c5c5d42))
     - Improved performance by replacing BTreeMap/Set with OrderMap/Set ([`51cacf0`](https://github.com/semiwaker/TTGraph/commit/51cacf08d0b60e8599abfc62f538e060cf2a9b2d))
