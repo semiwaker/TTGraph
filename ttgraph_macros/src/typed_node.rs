@@ -176,7 +176,9 @@ pub(crate) fn make_typed_node(
       }),
       LinkType::Vec(ident, camel) => add_source_ops.push(quote! {
         for (idx, i) in self.#ident.iter().enumerate() {
-          sources.push((*i, <#name as ttgraph::TypedNode>::Source::#camel(idx)));
+          if !i.is_empty() {
+            sources.push((*i, <#name as ttgraph::TypedNode>::Source::#camel(idx)));
+          }
         }
       }),
       LinkType::Empty => {},
@@ -194,7 +196,7 @@ pub(crate) fn make_typed_node(
         Self::LinkMirror::#camel => Box::new(self.#ident.iter().map(|x|*x)),
       },
       LinkType::Vec(ident, camel) => quote! {
-        Self::LinkMirror::#camel => Box::new(self.#ident.iter().map(|x|*x)),
+        Self::LinkMirror::#camel => Box::new(self.#ident.iter().filter(|x|!x.is_empty()).map(|x|*x)),
       },
       LinkType::Empty => quote! {
         Self::LinkMirror::Empty => Box::new([].into_iter()),

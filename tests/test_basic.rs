@@ -141,4 +141,32 @@ mod tests_typed {
     trans.fill_back(b, TestNode::CNode(CNode { tos: OrderSet::from_iter([c, d]) }));
     trans.fill_back(a, TestNode::CNode(CNode { tos: OrderSet::from_iter([b, c, d]) }));
   }
+
+  #[derive(Debug, TypedNode)]
+  struct VecNode {
+    x: Vec<NodeIndex>,
+  }
+
+  node_enum! {
+    #[derive(Debug)]
+    enum VecNodeEnum{
+      VecNode(VecNode)
+    }
+  }
+  #[test]
+  fn test_vec_empty() {
+    let ctx = Context::new();
+    let mut graph = Graph::new(&ctx);
+    let mut trans = Transaction::new(&ctx);
+    let a = alloc_node!(trans, VecNodeEnum::VecNode);
+    let b = trans.insert(VecNodeEnum::VecNode(VecNode { x: vec![a] }));
+    trans.fill_back(a, VecNodeEnum::VecNode(VecNode { x: Vec::new() }));
+    graph.commit(trans);
+    println!("{:?}", graph);
+
+    let mut trans = Transaction::new(&ctx);
+    mut_node!(trans, VecNodeEnum::VecNode, b, |b| { b.x.push(NodeIndex::empty()) });
+    graph.commit(trans);
+    println!("{:?}", graph);
+  }
 }

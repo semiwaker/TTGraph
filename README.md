@@ -2,6 +2,7 @@
 
 [<img alt="Static Badge" src="https://img.shields.io/badge/github-semiwaker%2Fttgraph-blue?style=for-the-badge&logo=github">](https://github.com/semiwaker/TTGraph)
 [<img alt="Static Badge" src="https://img.shields.io/badge/crates.io-ttgraph-orange?style=for-the-badge&logo=rust">](https://crates.io/crates/ttgraph)
+[<img alt="Static Badge" src="https://img.shields.io/crates/d/ttgraph?style=for-the-badge&color=yellow">](https://crates.io/crates/ttgraph)
 [<img alt="Static Badge" src="https://img.shields.io/badge/dos.rs-ttgraph-green?style=for-the-badge&logo=docs.rs">](https://docs.rs/ttgraph)
 
 TTGraph is:
@@ -443,6 +444,14 @@ Check the document for example.
 + + Separating different kinds of nodes. Now the time complexity of iterating a type of node is only related to the number of that kinds of node.
 + + Now allows `OrderSet<NodeIndex>` and `IndexSet<NodeIndex>`
 + Alloc node now requries to specify a type, to prevent filling back wrong kinds of node.
+
+### 0.4.1
+
++ Fixed performance issue caused by IndexMap.remove()
+
+### 0.4.2
+
++ Fixed a bug caused by `Vec<NodeIndex>` contains `NodeIndex::empty()`
 
 ## License
 
