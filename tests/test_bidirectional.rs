@@ -4,6 +4,7 @@
 
 #[cfg(test)]
 mod test_bidirectional {
+  use ::indexmap::IndexSet;
   use ::ordermap::{orderset, OrderSet};
   use std::collections::{BTreeSet, HashSet};
 
@@ -1123,5 +1124,53 @@ mod test_bidirectional {
     let node = get_node!(graph, XYNode::YNode, y).unwrap();
     assert_eq!(node.x1, x1);
     assert_eq!(node.x2, x2);
+  }
+
+  #[derive(TypedNode, Debug)]
+  struct ANode {
+    bs: IndexSet<NodeIndex>,
+    cs: IndexSet<NodeIndex>,
+  }
+  #[derive(TypedNode, Debug)]
+  struct BNode {
+    a: NodeIndex,
+  }
+  #[derive(TypedNode, Debug)]
+  struct CNode {
+    a: NodeIndex,
+  }
+
+  node_enum! {
+    #[derive(Debug)]
+    enum ABCNode{
+      ANode(ANode),
+      BNode(BNode),
+      CNode(CNode),
+    }
+    bidirectional!{
+      ANode.bs <-> BNode.a,
+      ANode.cs <-> CNode.a,
+    }
+  }
+
+  #[test]
+  fn test_multiconnect() {
+    let ctx = Context::new();
+    let mut graph = Graph::<ABCNode>::new(&ctx);
+
+    let mut trans = Transaction::new(&ctx);
+    let a = trans.insert(ABCNode::ANode(ANode { bs: IndexSet::new(), cs: IndexSet::new() }));
+    let b1 = trans.insert(ABCNode::BNode(BNode { a }));
+    let b2 = trans.insert(ABCNode::BNode(BNode { a }));
+    let c1 = trans.insert(ABCNode::CNode(CNode { a }));
+    let c2 = trans.insert(ABCNode::CNode(CNode { a }));
+
+    graph.commit(trans);
+
+    let node = get_node!(graph, ABCNode::ANode, a).unwrap();
+    assert!(node.bs.contains(&b1));
+    assert!(node.bs.contains(&b2));
+    assert!(node.cs.contains(&c1));
+    assert!(node.cs.contains(&c2));
   }
 }

@@ -94,6 +94,7 @@ pub trait TypedNode {
 pub trait NodeEnum: Discriminated<Self::Discriminant> {
   type SourceEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
   type LinkMirrorEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
+  // Link or Group
   type LoGMirrorEnum: Copy + Clone + Eq + PartialEq + Debug + Hash + PartialOrd + Ord + Sized + 'static;
   type Discriminant: NodeDiscriminant;
   type GenArena: CateArena<V = Self, D = Self::Discriminant> + Sized + 'static;
@@ -178,7 +179,7 @@ pub struct ModifyResult<LinkMirrorT> {
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum LinkType {
   Point, // Single NodeIndex
-  Set,  // HashSet or BTreeSet or OrderSet or IndexSet
+  Set,   // HashSet or BTreeSet or OrderSet or IndexSet
   Vec,   // Vec,
          // Enum
 }

@@ -667,7 +667,9 @@ where
         continue;
       }
 
+      // x.l -> y, find y.l2 or y.group should -> x
       let bds = self.nodes.get(x).unwrap().get_bidiretional_link_mirrors_of(l);
+      // expand y.group to y.l2
       let bds = self.nodes.get(y).unwrap().match_bd_link_group(bds);
       if bds.is_empty() {
         continue;
