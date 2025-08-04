@@ -444,7 +444,7 @@ Check the document for example.
 
 ### 0.4
 
-+ Improved performance. 
++ Improved performance.
 + + Use ordermap as backend.
 + + Separating different kinds of nodes. Now the time complexity of iterating a type of node is only related to the number of that kinds of node.
 + + Now allows `OrderSet<NodeIndex>` and `IndexSet<NodeIndex>`

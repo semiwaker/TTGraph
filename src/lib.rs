@@ -27,21 +27,21 @@
 //! use ttgraph::*;
 //! use std::collections::HashSet;
 //!
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct FactoryNode{
 //!   name: String,
 //!   workers: HashSet<NodeIndex>,
 //!   products: HashSet<NodeIndex>,
 //! }
 //!
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct WorkerNode{
 //!   name: String,
 //!   factory: NodeIndex,
 //!   produced: Vec<NodeIndex>,
 //! }
 //!
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct ProductNode{
 //!   id: usize
 //! }
@@ -62,24 +62,25 @@
 //! ```
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! // Use an node_enum to collect all node types together
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum Node{
 //!     Factory(FactoryNode),
 //!     Worker(WorkerNode),
@@ -117,7 +118,7 @@
 //! }));
 //!
 //! // Commit the transaction to the graph
-//! graph.commit(trans);
+//! graph.commit(trans).unwrap();
 //!
 //! // Get the factory node back
 //! let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
@@ -132,23 +133,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum Node{
 //!     Factory(FactoryNode),
 //!     Worker(WorkerNode),
@@ -163,23 +165,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! # node_enum!{
+//! #   #[derive(Debug)]
 //! #   enum Node{
 //! #     Factory(FactoryNode),
 //! #     Worker(WorkerNode),
@@ -197,23 +200,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! # node_enum!{
+//! #   #[derive(Debug)]
 //! #   enum Node{
 //! #     Factory(FactoryNode),
 //! #     Worker(WorkerNode),
@@ -225,7 +229,7 @@
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! let mut trans = Transaction::new(&ctx);
 //! // Do something with trans
-//! graph.commit(trans);
+//! graph.commit(trans).unwrap();
 //! # }
 //! ```
 //!
@@ -234,23 +238,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! # node_enum!{
+//! #   #[derive(Debug)]
 //! #   enum Node{
 //! #     Factory(FactoryNode),
 //! #     Worker(WorkerNode),
@@ -263,7 +268,7 @@
 //! # let mut trans = Transaction::new(&ctx);
 //! let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 //! let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
-//! # graph.commit(trans);
+//! # graph.commit(trans).unwrap();
 //! # }
 //! ```
 //!
@@ -272,23 +277,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! # node_enum!{
+//! #   #[derive(Debug)]
 //! #   enum Node{
 //! #     Factory(FactoryNode),
 //! #     Worker(WorkerNode),
@@ -318,7 +324,7 @@
 //!   factory,
 //!   produced: vec![product1],
 //! }));
-//! # graph.commit(trans);
+//! # graph.commit(trans).unwrap();
 //! # }
 //! ```
 //!
@@ -326,23 +332,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! # node_enum!{
+//! #   #[derive(Debug)]
 //! #   enum Node{
 //! #     Factory(FactoryNode),
 //! #     Worker(WorkerNode),
@@ -372,7 +379,7 @@
 //! #   factory,
 //! #   produced: vec![product1],
 //! # }));
-//! # graph.commit(trans);
+//! # graph.commit(trans).unwrap();
 //! let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
 //! assert_eq!(factory_node.name, "Factory");
 //! assert_eq!(factory_node.workers, HashSet::from([worker1, worker2]));
@@ -389,23 +396,24 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::HashSet;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct FactoryNode{
 //! #  name: String,
 //! #  workers: HashSet<NodeIndex>,
 //! #  products: HashSet<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct WorkerNode{
 //! #   name: String,
 //! #   factory: NodeIndex,
 //! #   produced: Vec<NodeIndex>,
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct ProductNode{
 //! #   id: usize
 //! #  }
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum Node{
 //!     Factory(FactoryNode),
 //!     Worker(WorkerNode),
@@ -440,7 +448,7 @@
 //!   produced: vec![product1],
 //! }));
 //!
-//! graph.commit(trans);
+//! graph.commit(trans).unwrap();
 //!
 //! // Get the factory node back
 //! let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
@@ -476,18 +484,19 @@
 //!
 //! ```rust
 //! # use ttgraph::*;
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct HumanWorkerNode{
 //!   name: String,
 //!   // ... other data
 //! }
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct RobotWorkerNode{
 //!   name: String,
 //!   // ... other data
 //! }
 //!
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum Node{
 //!     Human(HumanWorkerNode),
 //!     Robot(RobotWorkerNode),
@@ -500,7 +509,7 @@
 //! let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
 //! # let idx = trans.insert(Node::Human(HumanWorkerNode{name: "human".to_string()}));
-//! # graph.commit(trans);
+//! # graph.commit(trans).unwrap();
 //! // ... building the graph
 //!
 //! // idx: NodeIndex, node: &Node
@@ -531,17 +540,18 @@
 //!
 //! ```rust
 //! # use ttgraph::*;
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct HumanWorkerNode{
 //! #   name: String,
 //! #   // ... other data
 //! # }
-//! # #[derive(TypedNode)]
+//! # #[derive(TypedNode, Debug)]
 //! # struct RobotWorkerNode{
 //! #   name: String,
 //! #   // ... other data
 //! # }
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum Node{
 //!     Human(HumanWorkerNode),
 //!     Robot(RobotWorkerNode),
@@ -571,7 +581,7 @@
 //! ```rust
 //! # use ttgraph::*;
 //! # use std::collections::BTreeSet;
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct HumanWorkerNode{
 //!   name: String,
 //!   #[group(product)]
@@ -580,7 +590,7 @@
 //!   maked: BTreeSet<NodeIndex>,
 //!   // ... other data
 //! }
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct RobotWorkerNode{
 //!   name: String,
 //!   #[group(product)]
@@ -588,6 +598,7 @@
 //!   // ... other data
 //! }
 //! # node_enum!{
+//! #   #[derive(Debug)]
 //! #   enum Node{
 //! #     Human(HumanWorkerNode),
 //! #     Robot(RobotWorkerNode),
@@ -599,7 +610,7 @@
 //! # let mut graph = Graph::<Node>::new(&ctx);
 //! # let mut trans = Transaction::new(&ctx);
 //! # let idx = trans.insert(Node::Robot(RobotWorkerNode{name: "robot".to_string(), manufactured: BTreeSet::new()}));
-//! # graph.commit(trans);
+//! # graph.commit(trans).unwrap();
 //!
 //! let node = graph.get(idx).unwrap();
 //! for idx in node.get_links_by_group("product") {
@@ -621,22 +632,23 @@
 //! ```rust
 //! use ttgraph::*;
 //! use std::collections::HashSet;
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct FactoryNode{
 //!  name: String,
 //!  workers: HashSet<NodeIndex>,
 //! }
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct HumanWorkerNode{
 //!   name: String,
 //!   factory: NodeIndex,
 //! }
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct RobotWorkerNode{
 //!   name: String,
 //!   factory: NodeIndex,
 //! }
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum Node{
 //!     Factory(FactoryNode),
 //!     Human(HumanWorkerNode),
@@ -732,6 +744,7 @@
 //! }
 //!
 //! node_enum!{
+//!    #[derive(Debug)]
 //!   enum LR{
 //!     Left1(Left1),
 //!     Left2(Left2),
@@ -788,7 +801,7 @@
 //! trans.fill_back(r3, LR::Right3(Right3 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
 //! trans.fill_back(r4, LR::Right4(Right4 { g1: NodeIndex::empty(), g2: NodeIndex::empty() }));
 //!
-//! graph.commit(trans);
+//! graph.commit(trans).unwrap();
 //!
 //! let node = get_node!(graph, LR::Left1, l1).unwrap();
 //! assert_eq!(node.g1, r1);
@@ -824,14 +837,14 @@
 //!
 //! ```
 //! # use ttgraph::*;
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! #[phantom_group(b)]
 //! struct A{
 //!   #[group(a)]
 //!   x: NodeIndex,
 //! }
 //!
-//! #[derive(TypedNode)]
+//! #[derive(TypedNode, Debug)]
 //! struct B{
 //!   #[group(a)]
 //!   x: NodeIndex,
@@ -840,6 +853,7 @@
 //! }
 //!
 //! node_enum!{
+//!   #[derive(Debug)]
 //!   enum NodeAB{
 //!     A(A),
 //!     B(B),
@@ -897,7 +911,7 @@
 //! let x1 = trans.insert(XYNode::XNode(XNode{y}));
 //! let x2 = trans.insert(XYNode::XNode(XNode{y}));
 //!
-//! graph.commit(trans);
+//! graph.commit(trans).unwrap();
 //! # }
 //! ```
 //!
@@ -939,7 +953,7 @@
 //! let x2 = trans.insert(XYNode::XNode(XNode{y: NodeIndex::empty()}));
 //! let y = trans.insert(XYNode::YNode(YNode{x1, x2}));
 //!
-//! graph.commit(trans);
+//! graph.commit(trans).unwrap();
 //!
 //! let node = get_node!(graph, XYNode::XNode, x1).unwrap();
 //! assert_eq!(node.y, y);

@@ -411,6 +411,8 @@ where
   /// + there are multiple choices to make a bidirectional link (i.e. a.x <-> {b.y, b.z}, found a.x, don't know if b.y=x or b.z=x)
   /// + type check failed
   ///
+  /// ** Note that in current version, the contents in the graph is always changed after commit, even with an error occurs. In this case, the graph will be in an unstable state. **
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
@@ -447,12 +449,16 @@ where
   ///
   /// See [`GraphCheck`] for more information.
   #[cfg(feature = "debug")]
-  pub fn commit_checked(&mut self, t: Transaction<NodeT, Arena>, checks: &GraphCheck<NodeT>) {
+  pub fn commit_checked(
+    &mut self, t: Transaction<NodeT, Arena>, checks: &GraphCheck<NodeT>,
+  ) -> Result<(), CommitError<NodeT>> {
     let (lcr, mut err) = self.do_commit(t);
     self.check_link_type(&lcr, &mut err);
-    let result = self.check_change(&lcr, checks);
-    if !result.is_empty() {
-      panic!("Check failed: {:?}", &result);
+    self.check_change(&lcr, checks, &mut err);
+    if err.is_empty() {
+      Ok(())
+    } else {
+      Err(err)
     }
   }
 
@@ -703,15 +709,18 @@ where
       let found = bds.iter().any(|link| node.contains_link(*link, x));
 
       if !found {
-        assert!(bds.len() == 1, "Node with multiple choices for bidiretional link detected!");
-        let link = *bds.first().unwrap();
-        match self.nodes.get_mut(y).unwrap().add_link(link, x) {
-          Ok(added) => {
-            if added {
-              self.add_back_link(y, x, NodeT::to_source_enum(link));
-            }
-          },
-          Err(old) => err.link_multiconnect.push(LinkMultiConnectError { x: y, link, old, new: x }),
+        if bds.len() == 1 {
+          let link = *bds.first().unwrap();
+          match self.nodes.get_mut(y).unwrap().add_link(link, x) {
+            Ok(added) => {
+              if added {
+                self.add_back_link(y, x, NodeT::to_source_enum(link));
+              }
+            },
+            Err(old) => err.link_multiconnect.push(LinkMultiConnectError { x: y, link, old, new: x }),
+          }
+        } else {
+          err.bdlink_multichoices.push(BDLinkMultiChoiceError { x, link: l, y, choices: bds })
         }
       }
     }
@@ -750,8 +759,7 @@ where
   }
 
   #[cfg(feature = "debug")]
-  fn check_change<'a>(&self, lcr: &LinkChangeRecorder<NodeT>, checks: &'a GraphCheck<NodeT>) -> Vec<&'a str> {
-    let mut failed = Vec::new();
+  fn check_change(&self, lcr: &LinkChangeRecorder<NodeT>, checks: &GraphCheck<NodeT>, err: &mut CommitError<NodeT>) {
     let mut changed_nodes = OrderSet::new();
     for (x, _, _) in lcr.adds.iter().chain(lcr.removes.iter()) {
       changed_nodes.insert(*x);
@@ -759,28 +767,27 @@ where
     for (name, check_func) in &checks.node_checks {
       for x in &changed_nodes {
         if check_func(*x, self.get(*x).unwrap()).is_err() {
-          failed.push(name.as_str());
-          break;
+          err.custom_node_check.push((name.to_string(), *x));
+          // break;
         }
       }
     }
     for (name, check_func) in &checks.link_add_checks {
       for (x, y, _) in &lcr.adds {
         if check_func(*x, *y, self.get(*x).unwrap(), self.get(*y)).is_err() {
-          failed.push(name.as_str());
-          break;
+          err.custom_link_add_check.push((name.to_string(), *x, *y));
+          // break;
         }
       }
     }
     for (name, check_func) in &checks.link_remove_checks {
       for (x, y, _) in &lcr.adds {
         if check_func(*x, *y, self.get(*x).unwrap(), self.get(*y)).is_err() {
-          failed.push(name.as_str());
-          break;
+          err.custom_link_remove_check.push((name.to_string(), *x, *y));
+          // break;
         }
       }
     }
-    failed
   }
 
   pub(crate) fn do_deserialize(ctx: &Context, nodes: Vec<(NodeIndex, NodeT)>) -> Self {
@@ -946,15 +953,35 @@ pub struct LinkMultiConnectError<NodeT: NodeEnum + ?Sized> {
   pub new: NodeIndex,
 }
 
+/// Bidirectional link that have multiple choices.
+/// Assume `y.l1 <-> x.l, y.l2 <-> x.l`, a commit added `x.l = y`, while leaving y unchanged.
+/// Then the error will be: `{x, link: l, y, choices: vec![l1, l2]}`
+#[derive(Debug, Clone)]
+pub struct BDLinkMultiChoiceError<NodeT: NodeEnum + ?Sized> {
+  pub x: NodeIndex,
+  pub link: NodeT::LinkMirrorEnum,
+  pub y: NodeIndex,
+  pub choices: Vec<NodeT::LinkMirrorEnum>,
+}
+
 #[derive(Debug, Clone)]
 pub struct CommitError<NodeT: NodeEnum + ?Sized> {
   pub link_multiconnect: Vec<LinkMultiConnectError<NodeT>>,
   pub link_type_errors: Vec<LinkTypeError<NodeT>>,
+  pub bdlink_multichoices: Vec<BDLinkMultiChoiceError<NodeT>>,
+  pub custom_node_check: Vec<(String, NodeIndex)>,
+  pub custom_link_add_check: Vec<(String, NodeIndex, NodeIndex)>,
+  pub custom_link_remove_check: Vec<(String, NodeIndex, NodeIndex)>,
 }
 
 impl<NodeT: NodeEnum + ?Sized> CommitError<NodeT> {
   pub fn is_empty(&self) -> bool {
-    self.link_multiconnect.is_empty() && self.link_type_errors.is_empty()
+    self.link_multiconnect.is_empty()
+      && self.link_type_errors.is_empty()
+      && self.bdlink_multichoices.is_empty()
+      && self.custom_node_check.is_empty()
+      && self.custom_link_add_check.is_empty()
+      && self.custom_link_remove_check.is_empty()
   }
 }
 
@@ -963,6 +990,10 @@ impl<NodeT: NodeEnum + ?Sized> Default for CommitError<NodeT> {
     Self {
       link_multiconnect: Vec::new(),
       link_type_errors: Vec::new(),
+      bdlink_multichoices: Vec::new(),
+      custom_node_check: Vec::new(),
+      custom_link_add_check: Vec::new(),
+      custom_link_remove_check: Vec::new(),
     }
   }
 }
