@@ -45,7 +45,7 @@ mod tests_typed {
     let mut graph = Graph::<MyNodeEnum>::new(&context);
     let mut trans = Transaction::new(&context);
     let n = trans.insert(MyNodeEnum::Empty(NodeEmpty { x: 0 }));
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     for (idx, n) in iter_nodes!(graph, MyNodeEnum::Empty) {
       eprintln!("{:?} {:?}", idx, n);
     }
@@ -55,7 +55,7 @@ mod tests_typed {
     let a = trans.insert(MyNodeEnum::A(NodeA { to: b, name: "A".to_string() }));
     trans.fill_back(b, MyNodeEnum::B(NodeB { a, x: n, data1: 3 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     for (idx, n) in graph.iter() {
       eprintln!("{:?} {:?}", idx, n);
     }
@@ -105,7 +105,7 @@ mod tests_typed {
     trans.fill_back(b, TestNode::CNode(CNode { tos: OrderSet::from_iter([c, d]) }));
     trans.fill_back(a, TestNode::CNode(CNode { tos: OrderSet::from_iter([b, c, d]) }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     println!("{:?}", graph);
     trans = Transaction::new(&context);
@@ -114,7 +114,7 @@ mod tests_typed {
     trans.redirect_links(b, a);
     trans.redirect_links(d, c);
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     println!("{:?}", graph);
 
@@ -161,12 +161,12 @@ mod tests_typed {
     let a = alloc_node!(trans, VecNodeEnum::VecNode);
     let b = trans.insert(VecNodeEnum::VecNode(VecNode { x: vec![a] }));
     trans.fill_back(a, VecNodeEnum::VecNode(VecNode { x: Vec::new() }));
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     println!("{:?}", graph);
 
     let mut trans = Transaction::new(&ctx);
     mut_node!(trans, VecNodeEnum::VecNode, b, |b| { b.x.push(NodeIndex::empty()) });
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     println!("{:?}", graph);
   }
 }

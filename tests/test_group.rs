@@ -58,7 +58,7 @@ mod test_group {
       d: BTreeSet::from([x1, x3]),
     }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     let node = graph.get(x5).unwrap();
     assert_eq!(node.get_links_by_group("group1"), vec![x1, x2, x3]);
@@ -111,7 +111,7 @@ mod test_group {
     let c = trans.insert(MultiNodes::C(NodeC { c: 3 }));
     let d = trans.insert(MultiNodes::D(NodeD { d: 4 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     assert_eq!(Vec::from_iter(graph.iter_group("first").map(|(x, _)| x)), vec![a, b]);
     assert_eq!(Vec::from_iter(graph.iter_group("second").map(|(x, _)| x)), vec![c, d]);
@@ -122,20 +122,20 @@ mod test_group {
 
   #[derive(TypedNode)]
   #[phantom_group(b)]
-  struct A{
+  struct A {
     #[group(a)]
     x: NodeIndex,
   }
 
   #[derive(TypedNode)]
-  struct B{
+  struct B {
     #[group(a)]
     x: NodeIndex,
     #[group(b)]
     y: NodeIndex,
   }
 
-  node_enum!{
+  node_enum! {
     enum NodeAB{
       A(A),
       B(B),

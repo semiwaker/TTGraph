@@ -36,11 +36,12 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -52,7 +53,7 @@ where
   /// // In fact Transaction::<Node>::new(), but <Node> can be inferenced when commit
   /// let mut trans = Transaction::new(&ctx);
   /// trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// # }
   /// ```
   pub fn new(context: &Context) -> Self {
@@ -70,23 +71,24 @@ where
   }
 
   /// Allocate a new [`NodeIndex`] for a new node, use together with [`fill_back`](Transaction::fill_back)
-  /// 
+  ///
   /// A discriminant is required to denote the type of the node, which can be acquired by the [`discriminant!`](crate::discriminant!) macro. Use [`alloc_node!`](crate::alloc_node) is simplier.
   ///
   /// Useful when there is a cycle.
   ///
   /// # Panic
   /// If there is a node that is allocated, but is not filled back, it will be detected when commit.
-  /// 
+  ///
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   last: NodeIndex,
   ///   next: NodeIndex,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -104,7 +106,7 @@ where
   /// trans.fill_back(n1, Node::A(NodeA{ last: n3, next: n2 }));
   /// trans.fill_back(n2, Node::A(NodeA{ last: n1, next: n3 }));
   /// trans.fill_back(n3, Node::A(NodeA{ last: n2, next: n1 }));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// # }
   /// ```
   pub fn alloc(&mut self, d: NodeT::Discriminant) -> NodeIndex {
@@ -117,12 +119,13 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   last: NodeIndex,
   ///   next: NodeIndex,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -140,7 +143,7 @@ where
   /// trans.fill_back_untyped(n1, Node::A(NodeA{ last: n3, next: n2 }));
   /// trans.fill_back_untyped(n2, Node::A(NodeA{ last: n1, next: n3 }));
   /// trans.fill_back_untyped(n3, Node::A(NodeA{ last: n2, next: n1 }));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// # }
   /// ```
   pub fn alloc_untyped(&mut self) -> NodeIndex {
@@ -166,11 +169,12 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -181,7 +185,7 @@ where
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// let idx = trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// // Get the node back by the returned NodeIndex idx
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 1);
   /// # }
@@ -199,11 +203,12 @@ where
   /// Example:
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -214,12 +219,12 @@ where
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// let idx = trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// assert!(graph.get(idx).is_some());
   ///
   /// trans = Transaction::new(&ctx);
   /// trans.remove(idx);
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// // Now the node is removed
   /// assert!(graph.get(idx).is_none());
   /// # }
@@ -237,11 +242,12 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA),
   ///   }
@@ -252,7 +258,7 @@ where
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// let idx = trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 1);
   ///
   /// trans = Transaction::new(&ctx);
@@ -261,7 +267,7 @@ where
   ///     x.data = 2
   ///   }
   /// });
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// // Now the data field of the node is 2
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 2);
   /// }
@@ -279,7 +285,8 @@ where
       func(self.inc_nodes.get_mut(node).unwrap());
     } else {
       self.mut_nodes.push((node, Box::new(func)));
-    }  }
+    }
+  }
 
   /// Update a node with a closure `FnOnce(NodeT) -> NodeT`.
   ///
@@ -290,11 +297,12 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA),
   ///   }
@@ -305,7 +313,7 @@ where
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// let idx = trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 1);
   ///
   /// trans = Transaction::new(&ctx);
@@ -316,7 +324,7 @@ where
   ///     panic!()
   ///   }
   /// });
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// assert_eq!(get_node!(graph, Node::A, idx).unwrap().data, 2);
   /// # }
   /// ```
@@ -345,12 +353,13 @@ where
   /// ```
   /// use ttgraph::*;
   /// use std::collections::BTreeSet;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA {
   ///   tos: BTreeSet<NodeIndex>,
   /// }
   ///
   /// node_enum! {
+  ///   #[derive(Debug)]
   ///   enum Node {
   ///     A(NodeA),
   ///   }
@@ -371,7 +380,7 @@ where
   /// trans.redirect_all_links(c, b);
   /// trans.redirect_all_links(b, a);
   /// trans.redirect_all_links(d, c);
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   ///
   /// // Graph after redirect
   /// // a -> {a, a, a} = {a}
@@ -397,12 +406,13 @@ where
   /// ```
   /// use ttgraph::*;
   /// use std::collections::BTreeSet;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA {
   ///   tos: BTreeSet<NodeIndex>,
   /// }
   ///
   /// node_enum! {
+  ///   #[derive(Debug)]
   ///   enum Node {
   ///     A(NodeA),
   ///   }
@@ -419,7 +429,7 @@ where
   /// trans.fill_back(c, Node::A(NodeA { tos: BTreeSet::from_iter([d]) }));
   /// trans.fill_back(b, Node::A(NodeA { tos: BTreeSet::from_iter([c, d]) }));
   /// trans.fill_back(a, Node::A(NodeA { tos: BTreeSet::from_iter([b, c, d]) }));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   ///
   /// // Graph before redirect
   /// // a -> {b, c, d}
@@ -433,7 +443,7 @@ where
   /// trans.redirect_links(c, b);
   /// trans.redirect_links(b, a);
   /// trans.redirect_links(d, c);
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   ///
   /// // Graph after redirect
   /// // a -> {a, a, a} = {a}
@@ -456,11 +466,12 @@ where
   ///
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA),
   ///   }
@@ -486,8 +497,8 @@ where
   /// let mut graph3 = Graph::<Node>::new(&ctx2);
   /// let mut trans3 = Transaction::new(&ctx2);
   /// // graph1 and graph2 have different context
-  /// trans3.merge(graph2.switch_context(&ctx2));
-  /// graph3.commit(trans3);
+  /// trans3.merge(graph2.switch_context(&ctx2).unwrap());
+  /// graph3.commit(trans3).unwrap();
   /// // Now graph3 have all the nodes in graph2
   /// assert!(graph3.get(n1).is_some());
   /// assert!(graph3.get(n2).is_some());
@@ -505,11 +516,12 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -532,16 +544,17 @@ where
   /// # Example
   /// ```rust
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
   /// }
-  /// 
+  ///
   /// # fn main() {
   /// let ctx = Context::new();
   /// let mut graph = Graph::new(&ctx);
@@ -549,11 +562,17 @@ where
   /// assert!(trans.is_empty());
   /// let idx = trans.insert(Node::A(NodeA{data: 1}));
   /// assert!(!trans.is_empty());
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// # }
   /// ```
   pub fn is_empty(&self) -> bool {
-    self.alloc_nodes.is_empty() && self.inc_nodes.len() == 0 && self.dec_nodes.is_empty() && self.mut_nodes.is_empty() && self.update_nodes.is_empty() && self.redirect_links_vec.is_empty() && self.redirect_all_links_vec.is_empty()
+    self.alloc_nodes.is_empty()
+      && self.inc_nodes.len() == 0
+      && self.dec_nodes.is_empty()
+      && self.mut_nodes.is_empty()
+      && self.update_nodes.is_empty()
+      && self.redirect_links_vec.is_empty()
+      && self.redirect_all_links_vec.is_empty()
   }
 }
 

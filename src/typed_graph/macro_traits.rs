@@ -33,7 +33,7 @@ pub trait TypedNode {
   /// Modify a link by source, return (remove_sucess, add_success)
   fn modify_link(&mut self, source: Self::Source, old_idx: NodeIndex, new_idx: NodeIndex) -> (bool, bool);
   /// Add a link, designed for bidirectional links, return true if the link is actually added
-  fn add_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
+  fn add_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> Result<bool, NodeIndex>;
   /// Remove a link, designed for bidirectional links, return true if the link is actually removed
   fn remove_link(&mut self, link: Self::LinkMirror, target: NodeIndex) -> bool;
   /// Check if the link contains target
@@ -107,7 +107,7 @@ pub trait NodeEnum: Discriminated<Self::Discriminant> {
     &mut self, source: Self::SourceEnum, old_idx: NodeIndex, new_idx: NodeIndex,
   ) -> ModifyResult<Self::LinkMirrorEnum>;
   /// Add a link, designed for bidirectional links
-  fn add_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
+  fn add_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> Result<bool, NodeIndex>;
   /// Remove a link, designed for bidirectional links
   fn remove_link(&mut self, link: Self::LinkMirrorEnum, target: NodeIndex) -> bool;
   /// Check if the link and the node is of the same type

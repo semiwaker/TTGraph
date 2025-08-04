@@ -166,7 +166,7 @@ mod test_bidirectional {
     trans.fill_back(dn2, NodeType::DataNode(DataNode { parent: bn, data: 2 }));
     trans.fill_back(dn3, NodeType::DataNode(DataNode { parent: NodeIndex::empty(), data: 3 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     (
       ctx,
       graph,
@@ -341,7 +341,7 @@ mod test_bidirectional {
     let dn4 = trans.insert(NodeType::DataNode(DataNode { parent: bn, data: 4 }));
     trans.fill_back(dn5, NodeType::DataNode(DataNode { parent: NodeIndex::empty(), data: 5 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     {
       let node = get_node!(graph, NodeType::GraphNode, gn1).unwrap();
       assert_eq!(node.tos, BTreeSet::from_iter(vec![gn2, gn3, gn4]));
@@ -537,7 +537,7 @@ mod test_bidirectional {
     });
     let dn5 = trans.insert(NodeType::DataNode(DataNode { parent: bn2, data: 5 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
     {
       let node = get_node!(graph, NodeType::GraphNode, gn1).unwrap();
       assert_eq!(node.tos, BTreeSet::from_iter(vec![gn2, gn4]));
@@ -673,7 +673,7 @@ mod test_bidirectional {
     trans.remove(tn2);
     trans.remove(dn3);
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     {
       let node = get_node!(graph, NodeType::GraphNode, gn1).unwrap();
@@ -798,7 +798,7 @@ mod test_bidirectional {
     let bn2 = trans.insert(NodeType::BoxNode(BoxNode { inside: OrderSet::new() }));
     trans.redirect_links(bn, bn2);
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     {
       let node = get_node!(graph, NodeType::GraphNode, gn1).unwrap();
@@ -942,6 +942,7 @@ mod test_bidirectional {
   }
 
   node_enum! {
+    #[derive(Debug)]
     enum LR{
       Left1(Left1),
       Left2(Left2),
@@ -1023,7 +1024,7 @@ mod test_bidirectional {
       }),
     );
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     let node = get_node!(graph, LR::Left1, l1).unwrap();
     assert_eq!(node.g1, r1);
@@ -1094,7 +1095,7 @@ mod test_bidirectional {
     let x1 = trans.insert(XYNode::XNode(XNode { y }));
     let x2 = trans.insert(XYNode::XNode(XNode { y }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     let node = get_node!(graph, XYNode::XNode, x1).unwrap();
     assert_eq!(node.y, y);
@@ -1115,7 +1116,7 @@ mod test_bidirectional {
     let x2 = trans.insert(XYNode::XNode(XNode { y: NodeIndex::empty() }));
 
     let y = trans.insert(XYNode::YNode(YNode { x1, x2 }));
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     let node = get_node!(graph, XYNode::XNode, x1).unwrap();
     assert_eq!(node.y, y);
@@ -1165,7 +1166,7 @@ mod test_bidirectional {
     let c1 = trans.insert(ABCNode::CNode(CNode { a }));
     let c2 = trans.insert(ABCNode::CNode(CNode { a }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     let node = get_node!(graph, ABCNode::ANode, a).unwrap();
     assert!(node.bs.contains(&b1));

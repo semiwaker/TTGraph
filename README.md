@@ -33,21 +33,21 @@ Assume there are a few factories, workers and products, the following example us
 use tgraph::*;
 use std::collections::HashSet;
 
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct FactoryNode{
   name: String,
   workers: HashSet<NodeIndex>,
   products: HashSet<NodeIndex>,
 }
 
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct WorkerNode{
   name: String,
   factory: NodeIndex,
   produced: Vec<NodeIndex>,
 }
 
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct ProductNode{
   id: usize
 }
@@ -68,6 +68,7 @@ Next example shows how to build a graph.
 ```rust
 // Use an node_enum to collect all node types together
 node_enum!{
+  #[derive(Debug)]
   enum Node{
     Factory(FactoryNode),
     Worker(WorkerNode),
@@ -104,7 +105,7 @@ trans.fill_back(worker2, Node::Worker(WorkerNode{
 }));
 
 // Commit the transaction to the graph
-graph.commit(trans);
+graph.commit(trans).unwrap();
 
 // Get the factory node back
 let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
@@ -117,6 +118,7 @@ First, the `node_enum!` macro is used to create a enum to collect all types of n
 
 ```rust
 node_enum!{
+  #[derive(Debug)]
   enum Node{
     Factory(FactoryNode),
     Worker(WorkerNode),
@@ -145,7 +147,7 @@ Now we take a closer look on how to build the graph. `Product` nodes are the sim
 ```rust
 let product1 = trans.insert(Node::Product(ProductNode{ id: 1 }));
 let product2 = trans.insert(Node::Product(ProductNode{ id: 2 }));
-# graph.commit(trans);
+# graph.commit(trans).uwnrap();
 ```
 
 Factories and workers have a more complex relationship, as they cross-refenerence each other. That means we cannot make a `FactoryNode` or a `WorkerNode` alone. Lucky, TTGraph does operations in transaction, we can first allocate a `NodeIndex` with macro `alloc_node!` for the workers, then fill the data back with method `fill_back`. The transaction prevents dangling `NodeIndex` by checking all allocated nodes are filled back when committed.
@@ -187,6 +189,7 @@ TTGraph supports bidirectional link declaration. In this example, the `workers` 
 
 ```rust
 node_enum!{
+  #[derive(Debug)]
   enum Node{
     Factory(FactoryNode),
     Worker(WorkerNode),
@@ -219,7 +222,7 @@ let worker2 = trans.insert(Node::Worker(WorkerNode{
   produced: vec![product1],
 }));
 
-graph.commit(trans);
+graph.commit(trans).unwrap();
 
 // Get the factory node back
 let factory_node = get_node!(graph, Node::Factory, factory).unwrap();
@@ -253,18 +256,19 @@ Following last example, assume there are two types of workers, robots and humans
 `data_ref_by_name::<Type>::(&'static str name) -> Option<&Type>` method provides an interface to access a data field by its name. If the node have that field and the type matches (through `std::any::Any::downcast_ref`), `Some(&Type)` is returned, otherwise `None` is returned.
 
 ```rust
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct HumanWorkerNode{
   name: String,
   // ... other data
 }
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct RobotWorkerNode{
   name: String,
   // ... other data
 }
 
 node_enum!{
+  #[derive(Debug)]
   enum Node{
     Human(HumanWorkerNode),
     Robot(RobotWorkerNode),
@@ -303,6 +307,7 @@ Notes:
 
 ```rust
 node_enum!{
+  #[derive(Debug)]
   enum Node{
     Human(HumanWorkerNode),
     Robot(RobotWorkerNode),
@@ -327,7 +332,7 @@ Notes:
 + Yes, its form is inconsitent with `node_enum!`. The problem is if a struct is inside a macro, the linter (rust-analyzer) fails to show its content. The author personally thinks the `group!` form is more elegent, but does not worth ruining the linter.
 
 ```rust
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct HumanWorkerNode{
   name: String,
   #[group(product)]
@@ -336,7 +341,7 @@ struct HumanWorkerNode{
   maked: BTreeSet<NodeIndex>,
   // ... other data
 }
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct RobotWorkerNode{
   name: String,
   #[group(product)]
@@ -363,17 +368,17 @@ Feature `debug` is required. Otherwise all checks are skipped.
 ```rust
 use ttgraph::*;
 use std::collections::HashSet;
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct FactoryNode{
  name: String,
  workers: HashSet<NodeIndex>,
 }
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct HumanWorkerNode{
   name: String,
   factory: NodeIndex,
 }
-#[derive(TypedNode)]
+#[derive(TypedNode, Debug)]
 struct RobotWorkerNode{
   name: String,
   factory: NodeIndex,
@@ -452,6 +457,10 @@ Check the document for example.
 ### 0.4.2
 
 + Fixed a bug caused by `Vec<NodeIndex>` contains `NodeIndex::empty()`
+
+### 0.5
+
++ Moved panics into `Result`. Now `graph.commit()` returns a `Result<(), CommitError>` for more debug information.
 
 ## License
 

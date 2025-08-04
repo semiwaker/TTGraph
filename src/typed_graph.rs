@@ -24,6 +24,8 @@ pub mod serialize;
 // pub mod library;
 pub mod macro_traits;
 pub use macro_traits::*;
+// pub mod link;
+// pub use link::*;
 
 mod transaction;
 pub use transaction::Transaction;
@@ -96,19 +98,20 @@ impl Display for NodeIndex {
 /// use ttgraph::*;
 /// # use std::collections::BTreeSet;
 ///
-/// #[derive(TypedNode)]
+/// #[derive(TypedNode, Debug)]
 /// struct NodeA{
 ///   link: NodeIndex,
 ///   data: usize,
 /// }
 ///
-/// #[derive(TypedNode)]
+/// #[derive(TypedNode, Debug)]
 /// struct NodeB{
 ///   links: BTreeSet<NodeIndex>,
 ///   another_data: String,
 /// }
 ///
 /// node_enum!{
+///   #[derive(Debug)]
 ///   enum Node{
 ///     A(NodeA),
 ///     B(NodeB)
@@ -120,7 +123,7 @@ impl Display for NodeIndex {
 /// let mut graph = Graph::<Node>::new(&ctx);
 /// let mut trans = Transaction::new(&ctx);
 /// // Does some operations on the transaction
-/// graph.commit(trans);
+/// graph.commit(trans).unwrap();
 /// # }
 /// ```
 pub struct Graph<NodeT, Arena = <NodeT as NodeEnum>::GenArena>
@@ -153,12 +156,13 @@ where
   /// ```
   /// use ttgraph::*;
   ///
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   ///
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -171,7 +175,7 @@ where
   /// let idx = trans.insert(Node::A(NodeA{
   ///   data: 1
   /// }));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   ///
   /// // node: Option<&Node>
   /// let node = graph.get(idx);
@@ -196,16 +200,17 @@ where
   /// ```
   /// use ttgraph::*;
   ///
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   a: usize
   /// }
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeB{
   ///   b: usize
   /// }
   ///
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA),
   ///     B(NodeB),
@@ -220,7 +225,7 @@ where
   /// trans.insert(Node::A(NodeA{ a: 1 }));
   /// trans.insert(Node::A(NodeA{ a: 2 }));
   /// trans.insert(Node::B(NodeB{ b: 0 }));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   ///
   /// // iterator.next() returns Option<(NodeIndex, &Node)>
   /// let iterator = graph.iter();
@@ -244,16 +249,17 @@ where
   /// ```
   /// use ttgraph::*;
   ///
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   a: usize
   /// }
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeB{
   ///   b: usize
   /// }
   ///
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA),
   ///     B(NodeB),
@@ -268,7 +274,7 @@ where
   /// trans.insert(Node::A(NodeA{ a: 1 }));
   /// trans.insert(Node::A(NodeA{ a: 2 }));
   /// trans.insert(Node::B(NodeB{ b: 0 }));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   ///
   /// for (_, node) in graph.iter_type(discriminant!(Node::A)){
   ///   if let Node::A(a) = node {
@@ -332,7 +338,7 @@ where
   ///  let b = trans.insert(MultiNodes::B(NodeB { b: 2 }));
   ///  let c = trans.insert(MultiNodes::C(NodeC { c: 3 }));
   ///  let d = trans.insert(MultiNodes::D(NodeD { d: 4 }));
-  ///  graph.commit(trans);
+  ///  graph.commit(trans).unwrap();
   ///
   ///  assert_eq!(Vec::from_iter(graph.iter_group("first").map(|(x, _)| x)), vec![a, b]);
   ///  assert_eq!(Vec::from_iter(graph.iter_group("second").map(|(x, _)| x)), vec![c, d]);
@@ -350,11 +356,12 @@ where
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -368,7 +375,7 @@ where
   /// trans.insert(Node::A(NodeA{data: 1}));
   /// trans.insert(Node::A(NodeA{data: 1}));
   /// trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// assert_eq!(graph.len(), 3);
   /// # }
   /// ```
@@ -392,21 +399,27 @@ where
   /// + Remove nodes
   /// + Add/Remove links due to bidirectional declaration
   /// + Check link types
+  ///
   /// # Panics
   ///
   /// Panics if:
   ///
   /// + the transaction and the graph have different context
+  ///
+  /// # Errors
+  ///
   /// + there are multiple choices to make a bidirectional link (i.e. a.x <-> {b.y, b.z}, found a.x, don't know if b.y=x or b.z=x)
+  /// + type check failed
   ///
   /// # Example
   /// ```
   /// use ttgraph::*;
-  /// #[derive(TypedNode)]
+  /// #[derive(TypedNode, Debug)]
   /// struct NodeA{
   ///   data: usize,
   /// }
   /// node_enum!{
+  ///   #[derive(Debug)]
   ///   enum Node{
   ///     A(NodeA)
   ///   }
@@ -417,12 +430,17 @@ where
   /// let mut graph = Graph::<Node>::new(&ctx);
   /// let mut trans = Transaction::new(&ctx);
   /// trans.insert(Node::A(NodeA{data: 1}));
-  /// graph.commit(trans);
+  /// graph.commit(trans).unwrap();
   /// # }
   /// ```
-  pub fn commit(&mut self, t: Transaction<NodeT, Arena>) {
-    let lcr = self.do_commit(t);
-    self.check_link_type(&lcr);
+  pub fn commit(&mut self, t: Transaction<NodeT, Arena>) -> Result<(), CommitError<NodeT>> {
+    let (lcr, mut err) = self.do_commit(t);
+    self.check_link_type(&lcr, &mut err);
+    if err.is_empty() {
+      Ok(())
+    } else {
+      Err(err)
+    }
   }
 
   /// Similar to [`commit()`](Graph::commit), but with additional checks on the changed nodes and links.
@@ -430,8 +448,8 @@ where
   /// See [`GraphCheck`] for more information.
   #[cfg(feature = "debug")]
   pub fn commit_checked(&mut self, t: Transaction<NodeT, Arena>, checks: &GraphCheck<NodeT>) {
-    let lcr = self.do_commit(t);
-    self.check_link_type(&lcr);
+    let (lcr, mut err) = self.do_commit(t);
+    self.check_link_type(&lcr, &mut err);
     let result = self.check_change(&lcr, checks);
     if !result.is_empty() {
       panic!("Check failed: {:?}", &result);
@@ -447,7 +465,7 @@ where
   /// # Warning:
   /// + Please ensure there is no uncommitted transactions!
   /// + [`NodeIndex`] pointing to this graph is useless after context switching!
-  pub fn switch_context(self, new_ctx: &Context) -> Self {
+  pub fn switch_context(self, new_ctx: &Context) -> Result<Self, CommitError<NodeT>> {
     let mut new_nodes = Arena::new(new_ctx.node_dist.clone());
     let mut id_map = OrderMap::new();
 
@@ -469,10 +487,15 @@ where
     };
 
     let mut lcr = LinkChangeRecorder::default();
+    let mut err = CommitError::default();
     result.merge_nodes(new_nodes, &mut lcr);
-    result.apply_bidirectional_links(&lcr);
-    result.check_link_type(&lcr);
-    result
+    result.apply_bidirectional_links(&lcr, &mut err);
+    result.check_link_type(&lcr, &mut err);
+    if err.is_empty() {
+      Ok(result)
+    } else {
+      Err(err)
+    }
   }
 
   /// Check if all links are internal, just for debug
@@ -512,11 +535,12 @@ where
   #[cfg(not(feature = "debug"))]
   pub fn check_backlinks(&self) {}
 
-  fn do_commit(&mut self, t: Transaction<NodeT, Arena>) -> LinkChangeRecorder<NodeT> {
+  fn do_commit(&mut self, t: Transaction<NodeT, Arena>) -> (LinkChangeRecorder<NodeT>, CommitError<NodeT>) {
     debug_assert!(t.ctx_id == self.ctx_id, "The transaction and the graph are from different context!");
     debug_assert!(t.alloc_nodes.is_empty(), "There are unfilled allocated nodes");
 
     let mut lcr = LinkChangeRecorder::default();
+    let mut err = CommitError::default();
 
     self.redirect_links_vec(t.redirect_links_vec, &mut lcr);
     self.merge_nodes(t.inc_nodes, &mut lcr);
@@ -531,8 +555,8 @@ where
       self.remove_node(*n, &mut lcr);
     }
 
-    self.apply_bidirectional_links(&lcr);
-    lcr
+    self.apply_bidirectional_links(&lcr, &mut err);
+    (lcr, err)
   }
 
   fn merge_nodes(&mut self, nodes: Arena, lcr: &mut LinkChangeRecorder<NodeT>) {
@@ -647,7 +671,7 @@ where
     }
   }
 
-  fn apply_bidirectional_links(&mut self, lcr: &LinkChangeRecorder<NodeT>) {
+  fn apply_bidirectional_links(&mut self, lcr: &LinkChangeRecorder<NodeT>, err: &mut CommitError<NodeT>) {
     for &(x, y, l) in &lcr.removes {
       if !self.nodes.contains(x) || !self.nodes.contains(y) {
         continue;
@@ -680,9 +704,14 @@ where
 
       if !found {
         assert!(bds.len() == 1, "Node with multiple choices for bidiretional link detected!");
-        let link = bds.first().unwrap();
-        if self.nodes.get_mut(y).unwrap().add_link(*link, x) {
-          self.add_back_link(y, x, NodeT::to_source_enum(*link));
+        let link = *bds.first().unwrap();
+        match self.nodes.get_mut(y).unwrap().add_link(link, x) {
+          Ok(added) => {
+            if added {
+              self.add_back_link(y, x, NodeT::to_source_enum(link));
+            }
+          },
+          Err(old) => err.link_multiconnect.push(LinkMultiConnectError { x: y, link, old, new: x }),
         }
       }
     }
@@ -709,11 +738,12 @@ where
     }
   }
 
-  fn check_link_type(&self, lcr: &LinkChangeRecorder<NodeT>) {
+  fn check_link_type(&self, lcr: &LinkChangeRecorder<NodeT>, err: &mut CommitError<NodeT>) {
     for (_, y, l) in &lcr.adds {
       if let Some(node) = self.nodes.get(*y) {
-        if let Result::Err(err) = NodeT::check_link_type(node.discriminant(), *l) {
-          panic!("Link type check failed! Link {:?} expect {:?}, found {:?}", err.link, err.expect, err.found);
+        if let Result::Err(lerr) = NodeT::check_link_type(node.discriminant(), *l) {
+          err.link_type_errors.push(lerr);
+          // panic!("Link type check failed! Link {:?} expect {:?}, found {:?}", err.link, err.expect, err.found);
         }
       }
     }
@@ -756,9 +786,10 @@ where
   pub(crate) fn do_deserialize(ctx: &Context, nodes: Vec<(NodeIndex, NodeT)>) -> Self {
     let arena = Arena::new_from_iter(ctx.node_dist.clone(), nodes);
     let mut lcr = LinkChangeRecorder::default();
+    let mut err = CommitError::default();
     let mut graph = Self::new(ctx);
     graph.merge_nodes(arena, &mut lcr);
-    graph.apply_bidirectional_links(&lcr);
+    graph.apply_bidirectional_links(&lcr, &mut err);
     graph
   }
 }
@@ -896,6 +927,7 @@ impl Context {
 // }
 
 /// A struct to hold errors found in link type check
+#[derive(Debug, Clone)]
 pub struct LinkTypeError<NodeT: NodeEnum + ?Sized> {
   pub link: NodeT::LoGMirrorEnum,
   pub expect: &'static [NodeT::Discriminant],
@@ -903,3 +935,34 @@ pub struct LinkTypeError<NodeT: NodeEnum + ?Sized> {
 }
 
 pub type LinkTypeCheckResult<NodeT> = Result<(), LinkTypeError<NodeT>>;
+
+/// Links that have multiple connects due to bidirecitonal link.
+/// Before commit `x.l = old`. After commit `x.l` will link to `new` while previous link is not cut.
+#[derive(Debug, Clone)]
+pub struct LinkMultiConnectError<NodeT: NodeEnum + ?Sized> {
+  pub x: NodeIndex,
+  pub link: NodeT::LinkMirrorEnum,
+  pub old: NodeIndex,
+  pub new: NodeIndex,
+}
+
+#[derive(Debug, Clone)]
+pub struct CommitError<NodeT: NodeEnum + ?Sized> {
+  pub link_multiconnect: Vec<LinkMultiConnectError<NodeT>>,
+  pub link_type_errors: Vec<LinkTypeError<NodeT>>,
+}
+
+impl<NodeT: NodeEnum + ?Sized> CommitError<NodeT> {
+  pub fn is_empty(&self) -> bool {
+    self.link_multiconnect.is_empty() && self.link_type_errors.is_empty()
+  }
+}
+
+impl<NodeT: NodeEnum + ?Sized> Default for CommitError<NodeT> {
+  fn default() -> Self {
+    Self {
+      link_multiconnect: Vec::new(),
+      link_type_errors: Vec::new(),
+    }
+  }
+}

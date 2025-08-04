@@ -250,26 +250,29 @@ pub(crate) fn make_typed_node(
           if self.#ident.is_empty() {
             if self.#ident != target{
               self.#ident = target;
-              true
+              Ok(true)
             } else{
-              false
+              Ok(false)
             }
           } else {
-            assert!(self.#ident == target, "Add link on existing direct link");
-            false
+            if self.#ident == target {
+              Ok(false)
+            } else {
+              Err(self.#ident)
+            }
           }
         },
       },
       LinkType::Set(ident, camel) => quote! {
         Self::LinkMirror::#camel => {
-          self.#ident.insert(target)
+          Ok(self.#ident.insert(target))
         },
       },
       LinkType::Vec(_, camel) => quote! {
         Self::LinkMirror::#camel => panic!("Add link on Vec<NodeIndex> is not supported!"),
       },
       LinkType::Empty => quote! {
-        Self::LinkMirror::Empty => false,
+        Self::LinkMirror::Empty => Ok(false),
       },
     })
   }
@@ -441,7 +444,7 @@ pub(crate) fn make_typed_node(
           #(#modify_arms)*
         }
       }
-      fn add_link(&mut self, link: Self::LinkMirror, target: ttgraph::NodeIndex) -> bool {
+      fn add_link(&mut self, link: Self::LinkMirror, target: ttgraph::NodeIndex) -> Result<bool, NodeIndex> {
         match link{
           #(#add_link_arms)*
         }

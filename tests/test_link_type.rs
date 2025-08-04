@@ -9,27 +9,28 @@ mod test_link_type {
 
   use ttgraph::*;
 
-  #[derive(TypedNode)]
+  #[derive(TypedNode, Debug)]
   struct NodeA {
     to_a: NodeIndex,
     to_b: BTreeSet<NodeIndex>,
     x: NodeIndex,
   }
 
-  #[derive(TypedNode)]
+  #[derive(TypedNode, Debug)]
   struct NodeB {
     to_a: Vec<NodeIndex>,
     to_b: HashSet<NodeIndex>,
     x: NodeIndex,
   }
 
-  #[derive(TypedNode)]
+  #[derive(TypedNode, Debug)]
   struct NodeC {
     x: NodeIndex,
     y: NodeIndex,
   }
 
   node_enum! {
+    #[derive(Debug)]
     enum Node{
       A(NodeA),
       B(NodeB),
@@ -78,7 +79,7 @@ mod test_link_type {
     );
     trans.fill_back(c, Node::C(NodeC { x: b, y: a }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -107,7 +108,7 @@ mod test_link_type {
       }),
     );
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -136,7 +137,7 @@ mod test_link_type {
       }),
     );
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -165,7 +166,7 @@ mod test_link_type {
       }),
     );
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -194,7 +195,7 @@ mod test_link_type {
       }),
     );
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -223,13 +224,13 @@ mod test_link_type {
       }),
     );
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
 
     trans = Transaction::new(&ctx);
     mut_node!(trans, Node::A, a, x, {
       x.to_b.insert(a);
     });
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -260,7 +261,7 @@ mod test_link_type {
     );
     trans.fill_back(c, Node::C(NodeC { x: c, y: c }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[derive(TypedNode, Debug)]
@@ -328,6 +329,7 @@ mod test_link_type {
   }
 
   node_enum! {
+    #[derive(Debug)]
     enum LR{
       Left1(Left1),
       Left2(Left2),
@@ -379,7 +381,7 @@ mod test_link_type {
     trans.fill_back(r3, LR::Right3(Right3 { g1: l1, g2: l4 }));
     trans.fill_back(r4, LR::Right4(Right4 { g1: l2, g2: l4 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -408,7 +410,7 @@ mod test_link_type {
     trans.fill_back(r3, LR::Right3(Right3 { g1: l1, g2: l4 }));
     trans.fill_back(r4, LR::Right4(Right4 { g1: l2, g2: l4 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 
   #[test]
@@ -437,6 +439,6 @@ mod test_link_type {
     trans.fill_back(r3, LR::Right3(Right3 { g1: l1, g2: l4 }));
     trans.fill_back(r4, LR::Right4(Right4 { g1: l4, g2: l4 }));
 
-    graph.commit(trans);
+    graph.commit(trans).unwrap();
   }
 }

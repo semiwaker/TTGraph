@@ -135,7 +135,7 @@ pub(crate) fn make_node_enum(
         if let Self::LinkMirrorEnum::#ident(src) = link {
           <#ty as TypedNode>::add_link(x, src, target)
         } else {
-          false
+          Ok(false)
         }
       },
     })
@@ -265,7 +265,7 @@ pub(crate) fn make_node_enum(
           #(#mod_arms)*
         }
       }
-      fn add_link(&mut self, link: Self::LinkMirrorEnum, target: ttgraph::NodeIndex) -> bool {
+      fn add_link(&mut self, link: Self::LinkMirrorEnum, target: ttgraph::NodeIndex) -> Result<bool, NodeIndex> {
         match self{
           #(#add_link_arms)*
         }
