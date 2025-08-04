@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 (2025-08-04)
+
+### New Features
+
+ - <csr-id-4e1eb90fb7dae76473f50e4581fd316ff8fa7513/> add more error messages in CommitError
+
+### Test
+
+ - <csr-id-7f876654d7d6afefd4264de292d692794dab0fe8/> add multiconnect test in bidirectional
+
+### New Features (BREAKING)
+
+ - <csr-id-0d5dcdeb537b7cb093afd9fe3642ac6e46b693ab/> add errors for commit.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 261 days passed between releases.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add more error messages in CommitError ([`4e1eb90`](https://github.com/semiwaker/TTGraph/commit/4e1eb90fb7dae76473f50e4581fd316ff8fa7513))
+    - Add errors for commit. ([`0d5dcde`](https://github.com/semiwaker/TTGraph/commit/0d5dcdeb537b7cb093afd9fe3642ac6e46b693ab))
+    - Add multiconnect test in bidirectional ([`7f87665`](https://github.com/semiwaker/TTGraph/commit/7f876654d7d6afefd4264de292d692794dab0fe8))
+</details>
+
 ## 0.4.2 (2024-11-15)
 
 ### New Features

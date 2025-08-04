@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 (2025-08-04)
+
+### New Features
+
+ - <csr-id-4e1eb90fb7dae76473f50e4581fd316ff8fa7513/> add more error messages in CommitError
+
+### New Features (BREAKING)
+
+ - <csr-id-0d5dcdeb537b7cb093afd9fe3642ac6e46b693ab/> add errors for commit.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 261 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add more error messages in CommitError ([`4e1eb90`](https://github.com/semiwaker/TTGraph/commit/4e1eb90fb7dae76473f50e4581fd316ff8fa7513))
+    - Add errors for commit. ([`0d5dcde`](https://github.com/semiwaker/TTGraph/commit/0d5dcdeb537b7cb093afd9fe3642ac6e46b693ab))
+</details>
+
 ## 0.4.1 (2024-11-15)
 
 ### Bug Fixes
@@ -15,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 32 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -27,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
+    - Release ttgraph_macros v0.4.1, ttgraph v0.4.2 ([`8e783d5`](https://github.com/semiwaker/TTGraph/commit/8e783d59adb2d6ff20f52cdec67d1b67825d8d8f))
     - Vec<NodeIndex> contains NodeIndex::empty ([`4a89e9b`](https://github.com/semiwaker/TTGraph/commit/4a89e9b8ed1e5936b218b0ef1ef2940c5bcfbb27))
 </details>
 
